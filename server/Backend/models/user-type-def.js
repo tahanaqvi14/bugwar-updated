@@ -71,6 +71,7 @@ const typeDefs = gql`
     type Mutation{
         user_creation(input:createuser!):CreateUserResponse!
         user_login(input:loginuser!):CreateUserResponse!
+        admin_login(input:loginuser!):CreateUserResponse!
         Update(input:updateuser):user
         logout:CreateUserResponse!
         finduser_and_savematch(input: [inputformatchsaving!]!): Match!

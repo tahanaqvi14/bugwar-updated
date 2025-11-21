@@ -9,7 +9,6 @@ export default async function isloggedin(req) {
     // It runs before protected routes (like dashboard, profile, etc.)
     // It checks if the user is logged in by verifying their JWT token.
 
-    console.log(req.cookies .token)
     if (!req.cookies.token || req.cookies.token === "") {
         // It checks if the user has a token in their cookies OR If there's no token, or it's an empty string, it means the user is not logged in.
         return (false);

@@ -14,6 +14,10 @@ import Mainmenu from './page2/Mainmenu'
 import Leaderboard from './page2/Leaderboard';
 import Profile from './page2/Profile';
 import Popup from './page3/Popup';
+import Admin from './Admin/Admin'
+import Loginn from './Admin/Loginn'
+import Newchallenge from './Admin/Newchallenge'
+import History from './page2/History';
 
 // Create Socket.IO context to share socket instance
 export const SocketContext = createContext();
@@ -46,8 +50,13 @@ const App = () => {
           <Routes>
 
             {/* Pass connectSocket down to Login */}
-            {/* <Route path="/" element={<Popup />} /> */}
-            <Route path="/" element={<Login connectSocket={connectSocket} />} />
+            <Route path="/" element={<History/>} />
+            {/* <Route path="/" element={<Login connectSocket={connectSocket} />} /> */}
+            <Route path="/admin" element={<Loginn/>} />
+            <Route path="/admin/adminpage" element={<Admin/>} />
+
+            <Route path="/admin/newchallenge" element={<Newchallenge/>} />
+            {/* <Route path="/" element={<Admin/>} /> */}
             <Route path="/codeeditor" element={<CodeEditor />}/>
             {/* <Route path="/gamepage" element={<CodeEditor />}/> */}
             {/* <Route path="/" element={<Login connectSocket={connectSocket} />} /> */}

@@ -1,0 +1,9 @@
+.button1:hover {
+    background-color: inherit;
+    color: inherit;            /* keep original text color */
+    transform: none;           /* stop scale/rotate effects */
+    box-shadow: none;          /* remove shadow changes */
+    cursor: pointer;           /* keep pointer for usability */
+    transition: none;          /* remove any hover transition */
+  }
+  

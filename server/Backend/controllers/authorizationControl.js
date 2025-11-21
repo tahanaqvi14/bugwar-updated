@@ -85,7 +85,7 @@ export async function loginUser(req, res) {
                         username: user1.username
                       };
                       
-                      console.log(req.session.user.username)
+                    //   console.log(req.session.user.username)
                       
                       
                     // return res.redirect("/mainpage")

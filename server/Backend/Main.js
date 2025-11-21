@@ -173,8 +173,6 @@ const players = {}
 const roomName = ['room1', 'room2'];
 
 io.on('connection', (socket) => {
-  console.log('userresolvers import check:', Object.keys(userresolvers));
-
   console.log('Client connected:', socket.id)
   socket.on('joinRoom', async () => {
     for (let index = 0; index < roomName.length; index++) {
@@ -185,13 +183,13 @@ io.on('connection', (socket) => {
       if (roomData[roomname] && io.sockets.adapter.rooms.get(roomname)) {
         if (io.sockets.adapter.rooms.get(roomname).size < 2 && roomData[roomname].status == 'waiting') {// used to retrieve a Set of socket.ids that are currently connected to a specific room.
           socket.join(roomname);
-          players.player2 = {
+          players[socket.id] = {
             username: socket.request.session.user.username,
             socketID: socket.id,
             score: 0,
             room: roomname,
           }
-          roomData[roomname].players.push(players.player2)
+          roomData[roomname].players.push(players[socket.id])
           roomData[roomname].status = 'ready';
           let roominfo = roomData[roomname];
           let usernames = roominfo.players.map(player => player.username)
@@ -201,7 +199,6 @@ io.on('connection', (socket) => {
             { input: usernames }, // args
           )
           roomData[roomname].matchId = matchinfo.matchId;
-          console.log(roomData);
           io.to(roomname).emit('2players_connected', { matchinfo });
 
           const playerData = roomData[roomname].players.map(p => ({
@@ -223,15 +220,16 @@ io.on('connection', (socket) => {
           players: [],
           status: 'waiting',
         };
-        players.player1 = {
+        players[socket.id] = {
           username: socket.request.session.user.username,
           socketID: socket.id,
           score: 0,
           room: roomname,
         };
-        roomData[roomname].players.push(players.player1)
+        roomData[roomname].players.push(players[socket.id])
 
         break;
+
       }
     }
   })
@@ -251,67 +249,71 @@ io.on('connection', (socket) => {
         }
       }
     }
-    for (const key in players) {
-      if (players[key].socketID === socket) {
-        // console.log(players[key])
-        playerRoom = players[key].room;
-        delete players[key];
-        break;
-      }
-    }
+    delete players[socket];
   })
 
   socket.on('disconnect', async () => {
     console.log(`User ${socket.id} disconnected`);
-    
-    console.log('roomData at disconnect:', roomData);
-    const username = socket.request.session.user.username
-    await userresolvers.Mutation.remove(null, { usernames: username });
-
-    for (let index in roomData) {
-      const index1 = roomData[index].players.findIndex(
-        p => p.socketID == socket.id
+  
+    const sessionUser = socket.request.session?.user;
+    const username = sessionUser?.username;
+  
+    if (username) {
+      try {
+        await userresolvers.Mutation.remove(null, { usernames: username });
+      } catch (err) {
+        console.error("Failed to remove user:", err);
+      }
+    }
+  
+    for (let roomId in roomData) {
+      const room = roomData[roomId];
+  
+      const playerIndex = room.players.findIndex(
+        p => p.socketID === socket.id
       );
-      if (index1 > -1) {
-
-        let username = roomData[index].players[index1].username;
-        roomData[index].players.splice(index1, 1);
-
-        if (roomData[index].players.length == 0) {
-          delete roomData[index];
-        } else {
-          const updatedMatchh = await matchresolvers.Mutation.matchinterrupt(
-            null,
-            { matchId: roomData[index].matchId, username: username })
-          // const result = await userresolvers.Mutation.remove(
-          // null,
-          // {usernames:username});
-          io.to(index).emit('other_player_left')
-        }
-
+  
+      if (playerIndex === -1) continue;
+  
+      const username = room.players[playerIndex].username;
+  
+      // Remove from players map
+      delete players[socket.id];
+  
+      // Remove player from room
+      room.players.splice(playerIndex, 1);
+  
+      if (room.players.length === 0) {
+        delete roomData[roomId];   // delete empty room
+        continue;
       }
-    }
-    for (const key in players) {
-      if (players[key].socketID === socket) {
-        playerRoom = players[key].room;
-        delete players[key];
-        break;
+  
+      // There's still at least one player in the room → notify them
+      try {
+        const updatedMatch = await matchresolvers.Mutation.matchinterrupt(
+          null,
+          { matchId: room.matchId, username }
+        );
+  
+        io.to(roomId).emit('other_player_left', updatedMatch);
+      } catch (err) {
+        console.error("matchinterrupt failed:", err);
       }
+  
+      // Room should NOT be deleted here unless that is intended.
+      // If you REALLY want to delete it:
+      // delete roomData[roomId];
+  
+      break; // no need to search more rooms
     }
-    // logout
-
-  })
-
+  });
+  
   socket.on('next_challenge', async (socket, match) => {
     let playerRoom;
     let playerusername;
-    for (const key in players) {
-      if (players[key].socketID === socket) {
-        playerRoom = players[key].room;
-        playerusername = players[key].username;
-        break;
-      }
-    }
+    playerRoom = players[socket].room;
+    playerusername = players[socket].username;
+
 
     const updatedMatch = {
       ...match,
@@ -328,29 +330,54 @@ io.on('connection', (socket) => {
     io.to(playerRoom).emit('notify', playerusername, updatedMatch);
   })
 
-  socket.on('move_forward', () => {
-    for (let index in roomData) {
-      const index1 = roomData[index].players.findIndex(
-        p => p.socketID == socket.id
-      )
+  socket.on('game_over', async (match, s) => {
+    let targetRoom;
+    let isFirstPlayer = false;
 
-      if (index1 > -1) {
-        if (roomData[index].players[index1].score == 50) {
-          io.to(index).emit('end_for_all');
-          break;
+
+    for (let roomName in roomData) {
+      if (roomData[roomName].matchId === match.matchId) {
+        targetRoom = roomName;
+
+        // ✅ Check if this socketId is player1 (first player)
+        if (roomData[roomName].players[0]?.socketID === s) {
+          isFirstPlayer = true;
         }
-
-        roomData[index].players[index1].score += 10;
-
-        const playerData = roomData[index].players.map(p => ({
-          username: p.username,
-          score: p.score
-        }))
-        io.to(index).emit('Gaming_screen', { playerData });
         break;
       }
     }
-  })
+
+
+
+
+    if (!targetRoom) {
+      console.log('❌ Room not found');
+      return;
+    }
+
+    // ✅ Only first player can end game
+    if (!isFirstPlayer) {
+      console.log('⚪ Not first player, ignoring');
+      return;
+    }
+
+    console.log('🟢 First player confirmed, processing...');
+
+    const updatedMatch = await matchresolvers.Mutation.endgame(
+      null,
+      { matchId: match.matchId }
+    );
+
+    const ids = roomData[targetRoom].players.map(player => player.socketID);
+    delete roomData[targetRoom];
+    delete players[ids[0]]
+    delete players[ids[1]]
+    console.log('players',players)
+    console.log('roomData',roomData)
+
+    io.to(targetRoom).emit('completed');
+  });
+
 });
 
 app.use(cors({

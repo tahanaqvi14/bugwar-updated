@@ -1,7 +1,7 @@
 import Authenticator from '../../controllers/Authenticator.js'; // FIX: correct relative import
 import { Check_login_info } from '../../controllers/Check_login_info.js';
+import { Adminauth } from '../../controllers/Adminauth.js';
 import { getUserModel } from '../../utils/getUserModel.js'; // FIX: correct relative import
-
 
 
 
@@ -49,6 +49,13 @@ const resolvers = {
     },
 
     Mutation: {
+        admin_login:async (parent, args, context) => {
+            console.log(args);
+            let fetchinfo=args.input
+            const result = await Adminauth(fetchinfo, context);
+            return result;
+
+        },
         user_login: async (parent, args, context) => {
             try {
                 const UseruserModel = getUserModel('Users');
@@ -58,7 +65,7 @@ const resolvers = {
                 if (is_this_a_user != null) {
                     if (is_this_a_user.sessiontoken == false) {
                         const result = await Check_login_info(fetchedinfo, context, is_this_a_user);
-                        console.log(result)
+                        // console.log(result)
                         if(result.success==true){
                             is_this_a_user.sessiontoken = true;
                             await is_this_a_user.save();
@@ -111,7 +118,7 @@ const resolvers = {
                         message: 'User created successfully'
                     };
                 } else {
-                    console.log(`Username taken`)
+                    
                     return {
                         success: false,
                         message: `Username taken`
@@ -182,7 +189,7 @@ const resolvers = {
         },
 
         remove:async (parent, args, context) => {
-            console.log(args);
+            
             let usernames = args.usernames;
             const UserModel = getUserModel('Users');
             const updatedUser = await UserModel.findOneAndUpdate(

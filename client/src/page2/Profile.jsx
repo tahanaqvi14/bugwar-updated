@@ -147,6 +147,7 @@ mutation Logout {
         <div className="min-h-screen flex flex-col items-center justify-start bg-gradient-to-b from-[#8dc9c0] via-[#f7b96a] to-[#f9a62b] text-[#7a4f0a] select-none font-['Fredoka_One']">
             {/* <ToastContainer />` */}
             <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12">
+                
                 <div className="w-[420px] p-6 rounded-3xl bg-[#fce9b8] border-4 border-[#7f4f0a] shadow-[6px_6px_0_0_#7f4f0a]">
 
                     {/* PROFILE SECTION */}

@@ -7,11 +7,14 @@ const participantSchema = new mongoose.Schema({
     },
     points: {
         type: Number,
-        default:0,
+        default: 0,
+    },
+    displayname: {
+        type: String,
     }
-});
+})
 
-const Matches =mongoose.Schema({
+const Matches = mongoose.Schema({
     matchId: {
         type: String,
         required: true,
@@ -20,7 +23,7 @@ const Matches =mongoose.Schema({
     participants: [participantSchema],
     winner: {
         type: String,
-        default:'tobedecided',
+        default: 'tobedecided',
         trim: true
 
     },
@@ -28,8 +31,8 @@ const Matches =mongoose.Schema({
         type: Date,
         default: Date.now
     },
-    status:{
-        type:String,
+    status: {
+        type: String,
         default: 'Incomplete'
     },
     endTime: Date    // When match should end

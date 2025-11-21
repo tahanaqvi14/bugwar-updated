@@ -20,15 +20,20 @@ const Navbar = () => {
     const [player, setplayerinfo] = useState([])
     const [timeLeft, setTimeLeft] = useState(0);
     const [timeOffset, setTimeOffset] = useState(0);
-    const [isEnded, setIsEnded] = useState(false);
+    // const [isEnded, setIsEnded] = useState(false);
     const [displaytext, setdisplaytext] = useState('Game is getting started1');
-
 
     const matchinfo = useStore((state) => state.data);
     const setData = useStore((state) => state.setData);
 
+    const isEnded = useStore((state) => state.isEnded);
+    const setGlobalIsEnded = useStore((state) => state.setIsEnded);
+
+    const DC = useStore((state) => state.DC);
+
     // const [timeLeft, setTimeLeft] = useState(5 * 60 + 23);
     const boxRef = useRef(null);
+    const intervalRef = useRef(null); // ✅ Added interval ref
 
     useEffect(() => {
         if (matchinfo?.participants) {
@@ -36,15 +41,13 @@ const Navbar = () => {
         }
     }, [matchinfo])
 
-
-
     const { data, loading, error } = useQuery(GET_MATCH, {
         variables: { matchId: matchinfo.matchId },
         pollInterval: 5000
     });
 
     useEffect(() => {
-        if (!data || !data.Get_matchinfo) return;
+        if (!data || !data.Get_matchinfo || DC) return; // ✅ Stop timer when DC is true
 
         const match = data.Get_matchinfo; // ✅ define match here
 
@@ -59,20 +62,18 @@ const Navbar = () => {
         const end = new Date(match.endTime).getTime();
 
         // --- LIVE TIMER LOOP ---
-        const interval = setInterval(() => {
+        intervalRef.current = setInterval(() => { // ✅ Using intervalRef
             const now = Date.now() + offset;
             const remaining = Math.max(0, end - now);
-
             setTimeLeft(remaining);
-
             if (remaining === 0 && !isEnded) {
-                setIsEnded(true);
-                clearInterval(interval);
+                setGlobalIsEnded(true)
+                clearInterval(intervalRef.current); // ✅ Using intervalRef
             }
         }, 50);
 
-        return () => clearInterval(interval);
-    }, [data, isEnded]);
+        return () => clearInterval(intervalRef.current); // ✅ Using intervalRef
+    }, [data, isEnded, DC]); // ✅ Added DC to dependencies
 
     // if (loading) return <p>Loading match…</p>;
     // if (error) return <p>Error: {error.message}</p>;
@@ -125,21 +126,25 @@ const Navbar = () => {
         socket.on('notify', (data, updatedMatch) => {
             console.log(data)
             console.log(updatedMatch)
-            let displayName = playerRef.current.find(p => p.username === data)?.displayName;
-            console.log(displayName)
-            setdisplaytext(`${displayName} solved a problem!`)
+            let displayname = playerRef.current.find(p => p.username === data)?.displayname;
+            console.log(displayname)
+            setdisplaytext(`${displayname} solved a problem!`)
             setData(updatedMatch)
         })
-
-
+        
         return () => {
             socket.off('2players_connected');
             socket.off('welcome');
-            socket.off('notify', handler);
+            socket.off('notify');
         };
 
     }, [socket]);
 
+    useEffect(()=>{
+        if(isEnded){
+            socket.emit('game_over',matchinfo,socket.id);
+        }
+    },[isEnded])
 
     return (
         <div className="countdown-page">
@@ -155,7 +160,7 @@ const Navbar = () => {
                         </div>
                     </div>
 
-                    <div >
+                    <div>
                         <p className='text-2xl' ref={boxRef}>{displaytext}</p>
                     </div>
 
@@ -164,10 +169,10 @@ const Navbar = () => {
                         {/* Player 1 */}
                         <div className="player-card">
                             <div className="position-badge position-3">
-                                {player[0]?.displayName?.slice(0, 2)?.toUpperCase() || "--"}
+                                {player[0]?.displayname?.slice(0, 2)?.toUpperCase() || "--"}
                             </div>
                             <div className="player-info">
-                                <div className="player-name">{player[0]?.displayName || "Unknown"}</div>
+                                <div className="player-name">{player[0]?.displayname || "Unknown"}</div>
                             </div>
                             <span>Points: {player[0]?.points ?? 0}</span>
                         </div>
@@ -175,10 +180,10 @@ const Navbar = () => {
                         {/* Player 2 */}
                         <div className="player-card">
                             <div className="position-badge position-4">
-                                {player[1]?.displayName?.slice(0, 2)?.toUpperCase() || "--"}
+                                {player[1]?.displayname?.slice(0, 2)?.toUpperCase() || "--"}
                             </div>
                             <div className="player-info">
-                                <div className="player-name">{player[1]?.displayName || "Unknown"}</div>
+                                <div className="player-name">{player[1]?.displayname || "Unknown"}</div>
                             </div>
                             <span>Points: {player[1]?.points ?? 0}</span>
                         </div>

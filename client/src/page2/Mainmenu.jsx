@@ -35,7 +35,7 @@ const Mainmenu = () => {
   if (loading)
     return (
       <p className="text-center mt-10 text-lg">Loading Main Menu...</p>
-    );
+    )
 
   if (error) {
     if (error.message.includes("Not authenticated")) {

@@ -6,18 +6,19 @@ import { useQuery, gql, useLazyQuery } from "@apollo/client";
 import { useStore } from '../../store/Store';
 import Navbar from './Navbar';
 import Popup from './Popup'
-// import { GET_MATCH } from "./graphql/matchQueries";
+
 
 
 const GET_CHALLENGE = gql`
-  query Get_challenge {
-    Get_challenge {
+  query Get_challenge($idnum: Int) {
+    Get_challenge(idnum: $idnum) {
       function_name
       problem_statement
       id_number
     }
   }
-`
+`;
+
 
 
 
@@ -41,9 +42,25 @@ const GET_RESULT_OF_CODE = gql`
 `;
 
 const CodeEditor = () => {
+  const setDC = useStore((state) => state.setDC);
+
   const socket = useContext(SocketContext);
   const navigate = useNavigate();
-  const [getChallenge, { data: challenge_data, loading: challenge_loading, error: challenge_error }] = useLazyQuery(GET_CHALLENGE);
+  const [getChallenge, { data: challenge_data, loading: challenge_loading, error: challenge_error }] =
+  useLazyQuery(GET_CHALLENGE, {
+    onCompleted: (data) => {
+      console.log("✅ getChallenge() called. Data received:", data);
+    },
+    onError: (err) => {
+      console.error("❌ Error fetching challenge:", err);
+    },
+  });
+
+
+
+
+
+
   // const { data: match_data, loading: match_loading, error: match_error } = useQuery(Get_match);
   // console.log(match_data)
   const [getcode] = useLazyQuery(GET_RESULT_OF_CODE);
@@ -63,28 +80,44 @@ const CodeEditor = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [runningAction, setRunningAction] = useState(null);
 
-
   const [message, setmessage] = useState('');
   // Load Monaco editor once
   const matchinfo = useStore((state) => state.data);
 
+  // useEffect(() => {
+  //   if (isEnded) {
+  //     socket.emit('game_over',matchinfo)
+  //     setShowCard(true);
+  //   }
+  // }, [isEnded]); 
   const [showCard, setShowCard] = useState(false);
+
+
+
   useEffect(() => {
-    getChallenge();
+    getChallenge({ variables: { idnum: -1 } });
     if (socket) {
       console.log(`Socket connected in codeeditor component:${socket.id}`);
     }
 
-    socket.on('other_player_left',()=>{
-
+    socket.on('other_player_left', () => {
+      setDC(true);
       setShowCard(true);
       setTimeout(() => {
         navigate('/page2')
-      }, 7000);
+      }, 10000);
+    })
+
+    socket.on('completed', () => {
+      setShowCard(true);
+      setTimeout(() => {
+        navigate('/page2')
+      }, 10000);
 
     })
+
     // setplayerinfo(matchinfo.participants)
-    //  showCard
+
     let loaderScript;
 
     if (!window.monaco) {
@@ -197,10 +230,13 @@ const CodeEditor = () => {
           // editorRef.current.setValue(initialCode);
 
           setTimeout(() => {
+            getChallenge({ variables: { idnum: challenge_data.Get_challenge[0].id_number } });
             setOutput("");
             setconsolelogs([]);
             setresult([]);
             setmessage("");
+
+
           }, 1000);
 
 
@@ -262,7 +298,7 @@ const CodeEditor = () => {
 
 
 
-  
+
   return (
     <div className="maindiv">
       {/* Countdown and Player Section */}

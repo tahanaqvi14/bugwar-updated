@@ -7,6 +7,7 @@ const challenge_typeDefs = gql`
         problem_statement:String
         id_number:Int
         testcases: [testcase]
+        difficulty:String
     }
 
     type testcase {
@@ -39,9 +40,31 @@ const challenge_typeDefs = gql`
         message: TestCase
     }
 
-    type Query{
-        Get_challenge:[challenge]
-        checking_user_code(input:checking_code!):CodeResponse!
+    input TestCaseInput {
+        case: [Int!]!
+        expected: Int!
     }
-    `
-    export default challenge_typeDefs;
+
+    input ChallengeInput {
+        id_number:Int
+        function_name: String
+        problem_statement: String
+        testcases: [TestCaseInput]
+        difficulty: String
+    }
+
+    type Query{
+        Get_challenge(idnum:Int):[challenge]
+        checking_user_code(input:checking_code!):CodeResponse!
+        Get_challengeall:[challenge]
+        check:Boolean
+    }
+
+    type Mutation {
+        deleteChallenge(id_number: Int!): Boolean!
+        updateChallenge(input: ChallengeInput):challenge
+        createChallenge(input: ChallengeInput):Boolean!
+    }
+`
+
+export default challenge_typeDefs;
