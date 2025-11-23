@@ -70,6 +70,7 @@ const typeDefs = gql`
 
     type Mutation{
         user_creation(input:createuser!):CreateUserResponse!
+        send_email(email:String):CreateUserResponse!
         user_login(input:loginuser!):CreateUserResponse!
         admin_login(input:loginuser!):CreateUserResponse!
         Update(input:updateuser):user

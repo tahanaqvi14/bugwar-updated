@@ -9,6 +9,7 @@ import sound from "./images/sound.svg";
 import save from "./images/save.svg";
 import cross from "./images/cross.svg";
 import { useApolloClient } from "@apollo/client";
+import History from './History';
 
 
 
@@ -36,8 +37,9 @@ mutation Logout {
             displayname
             username
             }
-  }
-  `;
+  }`
+
+
   
   const Profile = () => {
       const client = useApolloClient();
@@ -47,8 +49,11 @@ mutation Logout {
     const { data, loading, error } = useQuery(GET_PROFILE_INFO);
     const [updateProfile] = useMutation(PROFILE_MUTATION);
     const [logoutProfile] = useMutation(LOGOUT_MUTATION);
-
+    
+    
     const users = data?.FindUserForProfile;
+
+  
 
     // Local states
     const [isEditing, setIsEditing] = useState(false);
@@ -146,7 +151,7 @@ mutation Logout {
     return (
         <div className="min-h-screen flex flex-col items-center justify-start bg-gradient-to-b from-[#8dc9c0] via-[#f7b96a] to-[#f9a62b] text-[#7a4f0a] select-none font-['Fredoka_One']">
             {/* <ToastContainer />` */}
-            <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12">
+            <div className="min-h-screen flex items-center justify-center px-6 py-12">
                 
                 <div className="w-[420px] p-6 rounded-3xl bg-[#fce9b8] border-4 border-[#7f4f0a] shadow-[6px_6px_0_0_#7f4f0a]">
 
@@ -212,28 +217,6 @@ mutation Logout {
                         </div>
                     </div>
 
-                    {/* SOUND / MUSIC TOGGLES */}
-                    <ul className="space-y-8 text-[#7a4f0a] font-extrabold text-2xl mt-2 pt-6 select-none">
-                        <li className="flex items-center justify-between">
-                            <div className="flex items-center space-x-4">
-                                <img
-                                    alt="Sound icon"
-                                    className="w-9 h-9 drop-shadow-md"
-                                    src={sound}
-                                    width="36"
-                                    height="36"
-                                />
-                                <span className="drop-shadow-sm">Sound</span>
-                            </div>
-
-                            <label className="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" className="sr-only peer" />
-                                <div className="w-16 h-9 bg-[#d6c6a6] rounded-full peer-checked:bg-green-600 relative shadow-inner transition-colors" />
-                                <div className="absolute left-1 top-1 w-7 h-7 bg-[#e6e3c3] rounded-full peer-checked:translate-x-7 transition-transform shadow-md" />
-                            </label>
-                        </li>
-                    </ul>
-
                     {/* LOGOUT BUTTON */}
                     <div className="pt-8 mt-1 text-center">
                         <button
@@ -244,6 +227,8 @@ mutation Logout {
                         </button>
                     </div>
                 </div>
+                {/* <history />` */}    
+                {users?.username && <History username={users.username} />}
             </div>
         </div>
     );

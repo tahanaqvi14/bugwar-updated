@@ -29,14 +29,12 @@ const Popup = () => {
     skip: !(isEnded || DC),
   });
 
-  console.log(data);
-
   let winnerData;
   if (loading) return null;
   if (error) return <div>Error loading match info</div>;
   if (!data || !data.Get_matchinfo) return null;
 
-  const matchData = data.Get_matchinfo;
+  const matchData = data?.Get_matchinfo;
   if (matchData.winner !== 'N') {
     winnerData = matchData.participants.find(p => p.username === matchData.winner);
   }

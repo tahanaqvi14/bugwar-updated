@@ -132,9 +132,7 @@ const Navbar = () => {
             setData(updatedMatch)
         })
         
-        return () => {
-            socket.off('2players_connected');
-            socket.off('welcome');
+        return () => {            
             socket.off('notify');
         };
 

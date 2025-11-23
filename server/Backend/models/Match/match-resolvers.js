@@ -1,7 +1,7 @@
 import { getUserModel } from '../../utils/getUserModel.js'
 import { v4 as uuidv4 } from 'uuid';
 
-const MATCH_DURATION = 0.5 * 60 * 1000; // 10 minutes
+const MATCH_DURATION = 10 * 60 * 1000; // 10 minutes
 
 const challenge_resolvers = {
 
@@ -25,7 +25,14 @@ const challenge_resolvers = {
                 endTime: matchObj.endTime ? matchObj.endTime.toISOString() : null,
                 serverTime: new Date().toISOString(),
             };
-        }
+        },
+        Get_allmatch: async (parent, args, context) => {
+            const MatchModel = getUserModel('Matches');
+            const matches = await MatchModel.find({
+                "participants.username": args.username
+            });
+            return matches;
+        },
     },
     Mutation: {
         endgame: async (parent, args, context) => {

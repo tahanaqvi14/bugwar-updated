@@ -10,8 +10,8 @@ import Popup from './Popup'
 
 
 const GET_CHALLENGE = gql`
-  query Get_challenge($idnum: Int) {
-    Get_challenge(idnum: $idnum) {
+  query Get_challenge($idnum: Int,$username: String) {
+    Get_challenge(idnum: $idnum,username: $username) {
       function_name
       problem_statement
       id_number
@@ -43,18 +43,20 @@ const GET_RESULT_OF_CODE = gql`
 
 const CodeEditor = () => {
   const setDC = useStore((state) => state.setDC);
+  const clientusername = useStore((state) => state.clientusername);
 
   const socket = useContext(SocketContext);
   const navigate = useNavigate();
   const [getChallenge, { data: challenge_data, loading: challenge_loading, error: challenge_error }] =
-  useLazyQuery(GET_CHALLENGE, {
-    onCompleted: (data) => {
-      console.log("✅ getChallenge() called. Data received:", data);
-    },
-    onError: (err) => {
-      console.error("❌ Error fetching challenge:", err);
-    },
-  });
+    useLazyQuery(GET_CHALLENGE, {
+      onCompleted: (data) => {
+        console.log(clientusername);
+        console.log("✅ getChallenge() called. Data received:", data);
+      },
+      onError: (err) => {
+        console.error("❌ Error fetching challenge:", err);
+      },
+    });
 
 
 
@@ -95,7 +97,7 @@ const CodeEditor = () => {
 
 
   useEffect(() => {
-    getChallenge({ variables: { idnum: -1 } });
+    getChallenge({ variables: { idnum: -1, username: clientusername } });
     if (socket) {
       console.log(`Socket connected in codeeditor component:${socket.id}`);
     }
@@ -193,11 +195,12 @@ const CodeEditor = () => {
   useEffect(() => {
     if (challenge_loading && editorRef.current) {
       editorRef.current.setValue("loading...");
-    } else if (challenge_data && editorRef.current) {
+    }
+    else if (challenge_data?.Get_challenge && editorRef.current) {
       editorRef.current.setValue(
-        `function ${challenge_data.Get_challenge[0].function_name}(){ 
-  //Write your function inside this
-}\n`
+        `function ${challenge_data.Get_challenge.function_name}(){ 
+    //Write your function inside this
+  }\n`
       );
     }
   }, [challenge_loading, challenge_data]);
@@ -208,10 +211,10 @@ const CodeEditor = () => {
     const code = editorRef.current.getValue();
     setIsRunning(true);
     setRunningAction(actionType);
-    console.log(challenge_data.Get_challenge[0].id_number)
+    console.log(challenge_data.Get_challenge.id_number)
     try {
       const { data } = await getcode({
-        variables: { input: { code, challengeid: challenge_data.Get_challenge[0].id_number } },
+        variables: { input: { code, challengeid: challenge_data.Get_challenge.id_number } },
       });
       console.log(data.checking_user_code);
       // if(data.checking_user_code.message.results.)
@@ -224,13 +227,13 @@ const CodeEditor = () => {
 
           // await getChallenge();
 
-          // let funcName = challengeData.Get_challenge[0].function_name;
+          // let funcName = challengeData.Get_challenge.function_name;
           // let initialCode = `function ${funcName}() {\n  // Write your code here\n}`;
           // setCode(initialCode);
           // editorRef.current.setValue(initialCode);
 
           setTimeout(() => {
-            getChallenge({ variables: { idnum: challenge_data.Get_challenge[0].id_number } });
+            getChallenge({ variables: { idnum: challenge_data.Get_challenge.id_number , username: clientusername} });
             setOutput("");
             setconsolelogs([]);
             setresult([]);
@@ -282,7 +285,7 @@ const CodeEditor = () => {
   };
 
   const handleReset = () => {
-    const initialCode = `function ${challenge_data.Get_challenge[0].function_name}(){
+    const initialCode = `function ${challenge_data.Get_challenge.function_name}(){
     //Write your function inside this
 }\n`;
     setCode(initialCode);
@@ -318,16 +321,18 @@ const CodeEditor = () => {
           <p>
             {challenge_loading
               ? "Loading..."
-              : challenge_data
-                ? challenge_data.Get_challenge[0].problem_statement
-                : "Error loading challenge."}
+              : challenge_data?.Get_challenge
+                ? challenge_data.Get_challenge.problem_statement
+                : "Error loading challenge."
+            }
           </p>
+
           <p>
             {challenge_loading
               ? ""
-              : challenge_data
+              : challenge_data?.Get_challenge
                 ? "Make sure to wrap your code in " +
-                challenge_data.Get_challenge[0].function_name +
+                challenge_data.Get_challenge.function_name +
                 " function"
                 : ""}
           </p>

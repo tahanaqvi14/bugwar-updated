@@ -229,9 +229,12 @@ io.on('connection', (socket) => {
         roomData[roomname].players.push(players[socket.id])
 
         break;
-
       }
     }
+  })
+
+  socket.on('receivesock',(data)=>{
+    socket.emit('send_user',players[data].username);
   })
 
   socket.on('cancel_search', (socket) => {
@@ -254,10 +257,11 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', async () => {
     console.log(`User ${socket.id} disconnected`);
-  
+
     const sessionUser = socket.request.session?.user;
     const username = sessionUser?.username;
-  
+
+
     if (username) {
       try {
         await userresolvers.Mutation.remove(null, { usernames: username });
@@ -265,49 +269,49 @@ io.on('connection', (socket) => {
         console.error("Failed to remove user:", err);
       }
     }
-  
+
     for (let roomId in roomData) {
       const room = roomData[roomId];
-  
+
       const playerIndex = room.players.findIndex(
         p => p.socketID === socket.id
       );
-  
+
       if (playerIndex === -1) continue;
-  
+
       const username = room.players[playerIndex].username;
-  
+
       // Remove from players map
       delete players[socket.id];
-  
+
       // Remove player from room
       room.players.splice(playerIndex, 1);
-  
+
       if (room.players.length === 0) {
         delete roomData[roomId];   // delete empty room
         continue;
       }
-  
+
       // There's still at least one player in the room → notify them
       try {
         const updatedMatch = await matchresolvers.Mutation.matchinterrupt(
           null,
           { matchId: room.matchId, username }
         );
-  
+
         io.to(roomId).emit('other_player_left', updatedMatch);
       } catch (err) {
         console.error("matchinterrupt failed:", err);
       }
-  
+
       // Room should NOT be deleted here unless that is intended.
       // If you REALLY want to delete it:
       // delete roomData[roomId];
-  
+
       break; // no need to search more rooms
     }
   });
-  
+
   socket.on('next_challenge', async (socket, match) => {
     let playerRoom;
     let playerusername;
@@ -326,7 +330,6 @@ io.on('connection', (socket) => {
       null,
       { matchId: match.matchId, username: playerusername }
     );
-
     io.to(playerRoom).emit('notify', playerusername, updatedMatch);
   })
 
@@ -372,8 +375,8 @@ io.on('connection', (socket) => {
     delete roomData[targetRoom];
     delete players[ids[0]]
     delete players[ids[1]]
-    console.log('players',players)
-    console.log('roomData',roomData)
+    console.log('players', players)
+    console.log('roomData', roomData)
 
     io.to(targetRoom).emit('completed');
   });

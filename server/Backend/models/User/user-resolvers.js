@@ -2,6 +2,7 @@ import Authenticator from '../../controllers/Authenticator.js'; // FIX: correct 
 import { Check_login_info } from '../../controllers/Check_login_info.js';
 import { Adminauth } from '../../controllers/Adminauth.js';
 import { getUserModel } from '../../utils/getUserModel.js'; // FIX: correct relative import
+import Email from '../../utils/Email.js'; // FIX: correct relative import
 
 
 
@@ -56,6 +57,11 @@ const resolvers = {
             return result;
 
         },
+        send_email:async (parent, args, context) => {
+            const a=Email(args.email);
+            return a;
+            
+        },
         user_login: async (parent, args, context) => {
             try {
                 const UseruserModel = getUserModel('Users');
@@ -102,7 +108,6 @@ const resolvers = {
                 const UserModel = getUserModel('Users');
                 const fetchedinfo = args.input;
                 const username = fetchedinfo.username;
-
                 const username_available = await UserModel.findOne({ username: username }); // FIX: await
                 if (username_available == null) {
                     const user_all_detail = await Authenticator(fetchedinfo);

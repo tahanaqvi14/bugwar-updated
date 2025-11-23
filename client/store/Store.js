@@ -8,6 +8,9 @@ export const useStore = create((set) => ({
   isEnded: false,
   setIsEnded: (endState) => set({ isEnded: endState }),
 
+  clientusername:'',
+  setclientusername: (newData) => set({ clientusername: newData }),
+
   DC:false,
   setDC: (endState) => set({ DC: endState }),
 

@@ -2,6 +2,8 @@ import { NodeVM } from 'vm2';
 import vm from 'vm';
 
 const Code = async (userCode, challengeinfo) => {
+    console.log('challengeinfo',challengeinfo)
+
     // Step 1: Pre-validate syntax with vm  class
     try {
         new vm.Script(userCode);
@@ -52,7 +54,8 @@ const Code = async (userCode, challengeinfo) => {
         // });
 
         // Execute test cases
-        for (const tc of challengeinfo[0].testcase.values()) {
+        
+        for (const tc of challengeinfo[0].testcases) {
             let output, passed, error = null;
             output = userFunction(...tc.case);
             if (output === tc.expected) {

@@ -54,7 +54,7 @@ const challenge_typeDefs = gql`
     }
 
     type Query{
-        Get_challenge(idnum:Int):[challenge]
+        Get_challenge(idnum:Int,username:String):challenge
         checking_user_code(input:checking_code!):CodeResponse!
         Get_challengeall:[challenge]
         check:Boolean
