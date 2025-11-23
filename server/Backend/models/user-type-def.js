@@ -10,6 +10,7 @@ const typeDefs = gql`
         challenges_completed:[String!]
         totalWins:Int
         total_matches:Int
+        email:String
         sessiontoken:Boolean
     }
 
@@ -53,6 +54,7 @@ const typeDefs = gql`
         displayname:String!
         username:ID!
         password:String!
+        email:String!
     }
 
     input loginuser{
@@ -70,7 +72,7 @@ const typeDefs = gql`
 
     type Mutation{
         user_creation(input:createuser!):CreateUserResponse!
-        send_email(email:String):CreateUserResponse!
+        send_email(email:String,username:String):CreateUserResponse!
         user_login(input:loginuser!):CreateUserResponse!
         admin_login(input:loginuser!):CreateUserResponse!
         Update(input:updateuser):user

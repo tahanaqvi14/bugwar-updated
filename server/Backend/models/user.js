@@ -29,8 +29,15 @@ const user=mongoose.Schema({
         default: 'Rookie'
     },
     challenges_completed: {
-        type: [String], // or Number if just a count
+        type: [String],
         default: []
+    },
+    email:{
+        type:String,
+        minlength:1,
+        required:true,
+        trim:true,
+        unique:true
     },
     sessiontoken:{
         type:Boolean,

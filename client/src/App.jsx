@@ -13,6 +13,7 @@ import CodeEditor from './page3/CodeEditor';
 import Mainmenu from './page2/Mainmenu'
 import Leaderboard from './page2/Leaderboard';
 import Profile from './page2/Profile';
+import Changepwd from './page2/Changepwd';
 import Popup from './page3/Popup';
 import Admin from './Admin/Admin'
 import Loginn from './Admin/Loginn'
@@ -51,7 +52,7 @@ const App = () => {
           <Routes>
 
             {/* Pass connectSocket down to Login */}
-            <Route path="/" element={<Singup/>} />
+            <Route path="/" element={<Changepwd/>} />
             {/* <Route path="/" element={<Login connectSocket={connectSocket} />} /> */}
             <Route path="/admin" element={<Loginn/>} />
             <Route path="/admin/adminpage" element={<Admin/>} />

@@ -7,13 +7,14 @@ import Secondpag from "./Secondpag";
 import { useMutation, gql } from '@apollo/client'
 
 const SEND_EMAIL_MUTATION = gql`
-  mutation SendEmail($email: String!) {
-    send_email(email: $email) {
+  mutation SendEmail($email: String!, $username: String!) {
+    send_email(email: $email, username: $username) {
       success
       message
     }
   }
 `;
+
 
 const input_text1 = ['D', 'i', 's', 'p', 'l', 'a', 'y', '\u00A0', 'N', 'a', 'm', 'e'];
 const input_text2 = ['U', 's', 'e', 'r', 'n', 'a', 'm', 'e'];
@@ -34,43 +35,61 @@ const Singup = () => {
 
   let displayname, username, password, email;
 
-  const handleSubmit =async (e)  => {
-    
-   
+  function showLoader() {
+    btnRef.current.disabled = true;
+    document.getElementById('submit-button').innerHTML = '<div id="loader"></div>';
+    document.getElementById('submit-button').classList.remove('button1');
+
+  }
+  function hideLoader() {
+    btnRef.current.disabled = false;
+    document.getElementById('submit-button').innerHTML = 'Create Account';
+    document.getElementById('submit-button').classList.add('button1');
+  }
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
-    displayname = displayRef.current.value.trim();
-    username = usernameRef.current.value.trim();
-    email = emailRef.current.value.trim();
-    password = passwordRef.current.value;
-
-    // Display name validation
-    if (!displayname) return toast.error("Display name is required");
-    if (displayname.length < 3) return toast.error("Display name must be at least 3 characters");
-    if (displayname.length > 10) return toast.error("Display name must be at most 10 characters");
-
-    // Username validation
-    if (!username) return toast.error("Username is required");
-    if (username.length < 4) return toast.error("Username must be at least 4 characters");
-    if (username.length > 12) return toast.error("Username must be at most 12 characters");
-
-    // Email validation
-    const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
-    if (!email) return toast.error("Email is required");
-    if (!gmailRegex.test(email)) return toast.error("Email must be a valid Gmail address");
-
-    // Password validation
-    if (!password) return toast.error("Password is required");
-    if (password.length < 8) return toast.error("Password must be at least 8 characters");
-    if (password.length > 20) return toast.error("Password must be at most 20 characters");
+    showLoader();
 
 
     try {
-      const { data } = await sendEmail({ variables: { email } });
-      setUserData({ displayname, username, email, password,message: data.send_email.message});
+      displayname = displayRef.current.value.trim();
+      username = usernameRef.current.value.trim();
+      email = emailRef.current.value.trim();
+      password = passwordRef.current.value;
+      // Display name validation
+      if (!displayname) return toast.error("Display name is required");
+      if (displayname.length < 3) return toast.error("Display name must be at least 3 characters");
+      if (displayname.length > 10) return toast.error("Display name must be at most 10 characters");
+
+      // Username validation
+      if (!username) return toast.error("Username is required");
+      if (username.length < 4) return toast.error("Username must be at least 4 characters");
+      if (username.length > 12) return toast.error("Username must be at most 12 characters");
+
+      // Email validation
+      const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+      if (!email) return toast.error("Email is required");
+      if (!gmailRegex.test(email)) return toast.error("Email must be a valid Gmail address");
+
+      // Password validation
+      if (!password) return toast.error("Password is required");
+      if (password.length < 8) return toast.error("Password must be at least 8 characters");
+      if (password.length > 20) return toast.error("Password must be at most 20 characters");
+
+
+
+      const { data } = await sendEmail({ variables: { email, username } })
+      console.log(data);
+      if (!data.send_email.success) {
+        return toast.error(data.send_email.message);
+      }
+      setUserData({ displayname, username, email, password, message: data.send_email.message });
       setShowOTPPage(true);
     } catch (error) {
       return toast.error(`${error}`);
+    }finally{
+      hideLoader();
     }
   }
 
@@ -168,7 +187,7 @@ const Singup = () => {
             justifyContent: "center",
             zIndex: 999,
           }}>
-          <Secondpag 
+          <Secondpag
             userData={userData}
             onClose={() => setShowOTPPage(false)} />
         </div>

@@ -29,31 +29,31 @@ mutation Logout {
     }
     }
     `;
-    
-    
-    const GET_PROFILE_INFO = gql`
+
+
+const GET_PROFILE_INFO = gql`
     query {
         FindUserForProfile {
             displayname
             username
+            email
             }
   }`
 
 
-  
-  const Profile = () => {
-      const client = useApolloClient();
-      const navigate = useNavigate();
+
+const Profile = () => {
+    const client = useApolloClient();
+    const navigate = useNavigate();
+    const [showOTPPage, setShowOTPPage] = useState(false)
 
     // GraphQL hooks
     const { data, loading, error } = useQuery(GET_PROFILE_INFO);
     const [updateProfile] = useMutation(PROFILE_MUTATION);
     const [logoutProfile] = useMutation(LOGOUT_MUTATION);
-    
-    
-    const users = data?.FindUserForProfile;
 
-  
+
+    const users = data?.FindUserForProfile;
 
     // Local states
     const [isEditing, setIsEditing] = useState(false);
@@ -101,26 +101,26 @@ mutation Logout {
 
     const handleLogout = async () => {
         try {
-          const res = await logoutProfile(); // call the GraphQL logout mutation
-          const { success, message } = res.data.logout;
-      
-          if (success) {
-            await client.clearStore();
+            const res = await logoutProfile(); // call the GraphQL logout mutation
+            const { success, message } = res.data.logout;
 
-            toast.success(message || "Logged out successfully!");
-            // wait a bit to let the toast show, then redirect
-            setTimeout(() => {
-              navigate("/"); // go back to login/home page
-            }, 1000);
-          } else {
-            toast.error(message || "Logout failed!");
-          }
+            if (success) {
+                await client.clearStore();
+
+                toast.success(message || "Logged out successfully!");
+                // wait a bit to let the toast show, then redirect
+                setTimeout(() => {
+                    navigate("/"); // go back to login/home page
+                }, 1000);
+            } else {
+                toast.error(message || "Logout failed!");
+            }
         } catch (err) {
-          console.error("Logout error:", err);
-          toast.error("Logout failed! Please try again.");
+            console.error("Logout error:", err);
+            toast.error("Logout failed! Please try again.");
         }
-      };
-      
+    };
+
 
     if (loading)
         return (
@@ -147,12 +147,16 @@ mutation Logout {
         );
     }
 
+    async function changepwd() {
+        setShowOTPPage(true);
+    }
+
 
     return (
         <div className="min-h-screen flex flex-col items-center justify-start bg-gradient-to-b from-[#8dc9c0] via-[#f7b96a] to-[#f9a62b] text-[#7a4f0a] select-none font-['Fredoka_One']">
             {/* <ToastContainer />` */}
             <div className="min-h-screen flex items-center justify-center px-6 py-12">
-                
+
                 <div className="w-[420px] p-6 rounded-3xl bg-[#fce9b8] border-4 border-[#7f4f0a] shadow-[6px_6px_0_0_#7f4f0a]">
 
                     {/* PROFILE SECTION */}
@@ -218,18 +222,47 @@ mutation Logout {
                     </div>
 
                     {/* LOGOUT BUTTON */}
-                    <div className="pt-8 mt-1 text-center">
+                    <div className="pt-8 mt-1 flex justify-between text-center">
                         <button
                             onClick={handleLogout}
-                            className="text-2xl font-bold text-[#b84b00] hover:scale-110 transition-transform duration-200 cursor-pointer"
+                            className="text-2xl font-bold text-[#b84b00] transition-transform duration-200 cursor-pointer"
                         >
                             Logout 🚪
                         </button>
+
+                        <button
+                            onClick={changepwd}
+                            className="text-2xl font-bold text-[#b84b00] transition-transform duration-200 cursor-pointer"
+
+                        >
+                            Change Password
+                        </button>
+
                     </div>
                 </div>
-                {/* <history />` */}    
+                {/* <history />` */}
                 {users?.username && <History username={users.username} />}
             </div>
+            {/* OTP Page */}
+            {showOTPPage && (
+                <div
+                    style={{
+                        position: "fixed",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        height: "100%",
+                        backgroundColor: "rgba(0, 0, 0, 0.5)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        zIndex: 999,
+                    }}>
+                    <Secondpag
+                        userData={users.email}
+                        onClose={() => setShowOTPPage(false)} />
+                </div>
+            )}
         </div>
     );
 };

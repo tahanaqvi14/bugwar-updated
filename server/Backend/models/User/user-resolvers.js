@@ -50,18 +50,40 @@ const resolvers = {
     },
 
     Mutation: {
-        admin_login:async (parent, args, context) => {
+        admin_login: async (parent, args, context) => {
             console.log(args);
-            let fetchinfo=args.input
+            let fetchinfo = args.input
             const result = await Adminauth(fetchinfo, context);
             return result;
 
         },
-        send_email:async (parent, args, context) => {
-            const a=Email(args.email);
-            return a;
-            
+        send_email: async (parent, args, context) => {
+            const UserModel = getUserModel("Users");
+            const { email, username } = args;
+
+            const emailExists = await UserModel.findOne({ email });
+            if (emailExists) {
+                return {
+                    success: false,
+                    message: "Email already exists"
+                };
+            }
+
+            const usernameExists = await UserModel.findOne({ username });
+            if (usernameExists) {
+                return {
+                    success: false,
+                    message: "Username already exists"
+                };
+            }
+
+            const result = await Email(email);
+            return {
+                success: true,
+                message: result.message
+            };
         },
+
         user_login: async (parent, args, context) => {
             try {
                 const UseruserModel = getUserModel('Users');
@@ -72,7 +94,7 @@ const resolvers = {
                     if (is_this_a_user.sessiontoken == false) {
                         const result = await Check_login_info(fetchedinfo, context, is_this_a_user);
                         // console.log(result)
-                        if(result.success==true){
+                        if (result.success == true) {
                             is_this_a_user.sessiontoken = true;
                             await is_this_a_user.save();
                         }
@@ -108,35 +130,22 @@ const resolvers = {
                 const UserModel = getUserModel('Users');
                 const fetchedinfo = args.input;
                 const username = fetchedinfo.username;
-                const username_available = await UserModel.findOne({ username: username }); // FIX: await
-                if (username_available == null) {
-                    const user_all_detail = await Authenticator(fetchedinfo);
-
-                    await UserModel.create({
-                        displayname: user_all_detail.displayname,
-                        username: user_all_detail.username,
-                        password: user_all_detail.hash
-                    });
-
-                    return {
-                        success: true,
-                        message: 'User created successfully'
-                    };
-                } else {
-                    
-                    return {
-                        success: false,
-                        message: `Username taken`
-                    }
-                }
-
+                const user_all_detail = await Authenticator(fetchedinfo);
+                await UserModel.create({
+                    displayname: user_all_detail.displayname,
+                    username: user_all_detail.username,
+                    password: user_all_detail.hash,
+                    email:fetchedinfo.email,
+                });
+                return {
+                    success: true,
+                    message: 'User created successfully'
+                };
             } catch (error) {
                 return {
                     success: false,
                     message: `${error.message}`
                 }
-                // throw new Error(`Failed to create user: ${error.message}`);
-
             }
         },
 
@@ -193,8 +202,8 @@ const resolvers = {
             }
         },
 
-        remove:async (parent, args, context) => {
-            
+        remove: async (parent, args, context) => {
+
             let usernames = args.usernames;
             const UserModel = getUserModel('Users');
             const updatedUser = await UserModel.findOneAndUpdate(

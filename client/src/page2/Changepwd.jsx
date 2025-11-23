@@ -15,10 +15,12 @@ const CREATE_USER_MUTATION = gql`
     }
 `
 
-const Secondpag = ({ onClose, userData }) => {
+const Changepwd = ({ onClose, userData }) => {
     const navigate = useNavigate();
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
     const [loading, setLoading] = useState(false);
+    const [isVerified, setIsVerified] = useState(false);
+    const [inputValue, setInputValue] = useState('');
     const inputRefs = useRef([]);
     const btnRef = useRef(null);
     const [create_User] = useMutation(CREATE_USER_MUTATION);
@@ -94,6 +96,7 @@ const Secondpag = ({ onClose, userData }) => {
                 if (data?.user_creation?.success === false) {
                     toast.error(data.user_creation.message);
                 } else {
+                    setIsVerified(true);
                     toast.success("Account Created");
                     setTimeout(() => {
                         navigate("/")
@@ -154,7 +157,7 @@ const Secondpag = ({ onClose, userData }) => {
                 </p>
 
                 <form onSubmit={handleVerifyOTP}>
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '20px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
                         {otp.map((digit, index) => (
                             <input
                                 key={index}
@@ -177,6 +180,26 @@ const Secondpag = ({ onClose, userData }) => {
                                 }}
                             />
                         ))}
+                        <button
+                            type="button"
+                            onClick={handleVerifyOTP}
+                            disabled={otp.join('').length !== 6 || loading}
+                            style={{
+                                padding: '8px 16px',
+                                fontSize: '14px',
+                                fontWeight: 'bold',
+                                backgroundColor: otp.join('').length === 6 ? '#f4b24a' : '#d4a574',
+                                color: '#5a3a1a',
+                                border: '2px solid #7f4f0a',
+                                borderRadius: '8px',
+                                cursor: otp.join('').length === 6 ? 'pointer' : 'not-allowed',
+                                opacity: loading ? 0.6 : 1,
+                                height: '55px',
+                                whiteSpace: 'nowrap',
+                            }}
+                        >
+                            {loading ? "..." : "Verify"}
+                        </button>
                     </div>
 
                     {/* ORIGINAL TEXT KEPT */}
@@ -187,6 +210,26 @@ const Secondpag = ({ onClose, userData }) => {
                     }}>
                         When you confirm the OTP, your account will be created
                     </p>
+
+                    <input
+                        type="text"
+                        value={inputValue}
+                        onChange={(e) => setInputValue(e.target.value)}
+                        disabled={!isVerified}
+                        placeholder={isVerified ? "Enter text here" : "Verify OTP first"}
+                        style={{
+                            width: '100%',
+                            padding: '12px 16px',
+                            fontSize: '16px',
+                            marginBottom: '15px',
+                            border: '2px solid #7f4f0a',
+                            borderRadius: '8px',
+                            backgroundColor: isVerified ? '#fff' : '#f0f0f0',
+                            color: isVerified ? '#5a3a1a' : '#999',
+                            cursor: isVerified ? 'text' : 'not-allowed',
+                            opacity: isVerified ? 1 : 0.6,
+                        }}
+                    />
 
                     <button
                         ref={btnRef}
@@ -213,4 +256,4 @@ const Secondpag = ({ onClose, userData }) => {
     );
 };
 
-export default Secondpag;
+export default Changepwd;
