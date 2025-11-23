@@ -6,14 +6,14 @@ import { useNavigate } from 'react-router-dom';
 
 
 
-const CREATE_USER_MUTATION = gql`
-    mutation user_creation($input: createuser!){
-        user_creation(input:$input){
-            success
-            message
-        }
+export const CHANGE_PASSWORD_MUTATION = gql`
+  mutation changepwdd($username: String!, $pwd: String!) {
+    changepwdd(username: $username, pwd: $pwd) {
+      success
+      message
     }
-`
+  }
+`;
 
 const Changepwd = ({ onClose, userData }) => {
     const navigate = useNavigate();
@@ -23,18 +23,48 @@ const Changepwd = ({ onClose, userData }) => {
     const [inputValue, setInputValue] = useState('');
     const inputRefs = useRef([]);
     const btnRef = useRef(null);
-    const [create_User] = useMutation(CREATE_USER_MUTATION);
+    const [pwdloading, setpwdloading] = useState(false);
+    const [update_pwd] = useMutation(CHANGE_PASSWORD_MUTATION);
+    const passwordRef = useRef();
 
     function showLoader() {
         btnRef.current.disabled = true;
-        document.getElementById('submit-button').innerHTML = '<div id="loader"></div>';
-        document.getElementById('submit-button').classList.remove('button1');
-
+        const otpVerifierBtn = document.getElementById('otpverfier');
+        if (otpVerifierBtn) {
+            otpVerifierBtn.innerHTML = '<div id="loader"></div>';
+            otpVerifierBtn.classList.remove('button1');
+            otpVerifierBtn.disabled = true;
+            otpVerifierBtn.style.pointerEvents = 'none';
+            otpVerifierBtn.style.cursor = 'not-allowed';
+        }
     }
+    
+    function showTickMark() {
+        const otpVerifierBtn = document.getElementById('otpverfier');
+        if (otpVerifierBtn) {
+            otpVerifierBtn.innerHTML = '✓';
+            otpVerifierBtn.style.fontSize = '24px';
+            otpVerifierBtn.style.color = '#22c55e';
+            otpVerifierBtn.disabled = true;
+            otpVerifierBtn.style.pointerEvents = 'none';
+            otpVerifierBtn.style.cursor = 'not-allowed';
+            setIsVerified(true);
+        }
+    }
+
     function hideLoader() {
         btnRef.current.disabled = false;
-        document.getElementById('submit-button').innerHTML = 'Create Account';
-        document.getElementById('submit-button').classList.add('button1');
+        setIsVerified(false);
+        const otpVerifierBtn = document.getElementById('otpverfier');
+        if (otpVerifierBtn) {
+            otpVerifierBtn.innerHTML = 'Verify';
+            otpVerifierBtn.classList.add('button1');
+            otpVerifierBtn.disabled = false;
+            otpVerifierBtn.style.pointerEvents = 'auto';
+            otpVerifierBtn.style.cursor = 'pointer';
+            otpVerifierBtn.style.fontSize = '14px';
+            otpVerifierBtn.style.color = '#5a3a1a';
+        }
     }
 
 
@@ -79,38 +109,68 @@ const Changepwd = ({ onClose, userData }) => {
         try {
             setLoading(true);
             console.log(userData)
-            if (otpValue === userData.message) {
-                const { data } = await create_User({
-                    variables: { 
-                      input: { 
-                        displayname: userData.displayname, 
-                        username: userData.username, 
-                        password: userData.password,
-                        email:userData.email,
-                      } 
-                    }
-                  });
-                  
-
-
-                if (data?.user_creation?.success === false) {
-                    toast.error(data.user_creation.message);
-                } else {
-                    setIsVerified(true);
-                    toast.success("Account Created");
-                    setTimeout(() => {
-                        navigate("/")
-
-                    }, 1000);
-                }
-            } else {
-                toast.error("Wrong OTP");
+            if (otpValue == userData.message) {
+                showTickMark();
+                toast.success("OTP Verified Successfully");
+                // const { data } = await create_User({
+                //     variables: {
+                //         input: {
+                //             username: userData.username,
+                //             password: userData.password,
+                //         }
+                //     }
+                // });
+            }
+            else {
+                toast.error("Wrong OTP | Try Again");
+                hideLoader();
             }
         } catch (err) {
             toast.error(err?.message || "Something went wrong");
+            hideLoader();
         } finally {
             setLoading(false);
-            hideLoader();
+        }
+    }
+
+    const verifypwd = async (e) => {
+        e.preventDefault();
+        setpwdloading(true);
+        passwordRef.current.disabled = true;
+        let password = inputValue;
+        try {
+            // Password validation
+            if (!password) {
+                toast.error("Password is required");
+                return;
+            }
+            if (password.length < 8) {
+                toast.error("Password must be at least 8 characters");
+                return;
+            }
+            if (password.length > 20) {
+                toast.error("Password must be at most 20 characters");
+                return;
+            }
+
+            const { data } = await update_pwd({ 
+                variables: { 
+                    username: userData?.username || '', 
+                    pwd: password 
+                } 
+            });
+            console.log(data);
+            if (data?.changepwdd?.success) {
+                toast.success(data.changepwdd.message || "Password changed successfully");
+            } else {
+                toast.error(data?.changepwdd?.message || "Failed to change password");
+            }
+
+        } catch (error) {
+            toast.error(error?.message || "Something went wrong");
+        } finally {
+            setpwdloading(false);
+            passwordRef.current.disabled = false;
         }
     }
     return (
@@ -122,7 +182,7 @@ const Changepwd = ({ onClose, userData }) => {
                     borderRadius: '12px',
                     padding: '30px 40px',
                     maxWidth: '450px',
-                    width: '90%',
+
                     textAlign: 'center',
                     border: '3px solid #7f4f0a',
                     position: "relative"
@@ -181,9 +241,11 @@ const Changepwd = ({ onClose, userData }) => {
                             />
                         ))}
                         <button
+                            ref={btnRef}
                             type="button"
                             onClick={handleVerifyOTP}
-                            disabled={otp.join('').length !== 6 || loading}
+                            id='otpverfier'
+                            disabled={loading}
                             style={{
                                 padding: '8px 16px',
                                 fontSize: '14px',
@@ -192,10 +254,21 @@ const Changepwd = ({ onClose, userData }) => {
                                 color: '#5a3a1a',
                                 border: '2px solid #7f4f0a',
                                 borderRadius: '8px',
-                                cursor: otp.join('').length === 6 ? 'pointer' : 'not-allowed',
+                                cursor: loading ? 'not-allowed' : 'pointer',
                                 opacity: loading ? 0.6 : 1,
                                 height: '55px',
                                 whiteSpace: 'nowrap',
+
+                            }}
+                            onMouseEnter={(e) => {
+                                if (e.target.disabled || e.target.style.pointerEvents === 'none') {
+                                    e.target.style.backgroundColor = e.target.style.backgroundColor;
+                                }
+                            }}
+                            onMouseLeave={(e) => {
+                                if (e.target.disabled || e.target.style.pointerEvents === 'none') {
+                                    e.target.style.backgroundColor = e.target.style.backgroundColor;
+                                }
                             }}
                         >
                             {loading ? "..." : "Verify"}
@@ -210,18 +283,22 @@ const Changepwd = ({ onClose, userData }) => {
                     }}>
                         When you confirm the OTP, your account will be created
                     </p>
+                </form>
 
+
+                <form>
                     <input
-                        type="text"
+                        type="password"
                         value={inputValue}
+                        ref={passwordRef}
                         onChange={(e) => setInputValue(e.target.value)}
                         disabled={!isVerified}
-                        placeholder={isVerified ? "Enter text here" : "Verify OTP first"}
+                        placeholder='Enter new password'
                         style={{
                             width: '100%',
                             padding: '12px 16px',
                             fontSize: '16px',
-                            marginBottom: '15px',
+                            marginBottom: '10px',
                             border: '2px solid #7f4f0a',
                             borderRadius: '8px',
                             backgroundColor: isVerified ? '#fff' : '#f0f0f0',
@@ -230,24 +307,25 @@ const Changepwd = ({ onClose, userData }) => {
                             opacity: isVerified ? 1 : 0.6,
                         }}
                     />
-
                     <button
-                        ref={btnRef}
-                        type="submit"
-                        disabled={otp.join('').length !== 6 || loading}
+                        type="button"
+                        onClick={verifypwd}
+                        disabled={!isVerified || pwdloading}
                         style={{
                             width: '100%',
                             padding: '12px 24px',
                             fontSize: '18px',
                             fontWeight: 'bold',
-                            backgroundColor: otp.join('').length === 6 ? '#f4b24a' : '#d4a574',
+                            backgroundColor: isVerified ? '#f4b24a' : '#d4a574',
                             borderRadius: '10px',
-                            cursor: otp.join('').length === 6 ? 'pointer' : 'not-allowed',
-                            opacity: loading ? 0.6 : 1,
+                            cursor: isVerified && !pwdloading ? 'pointer' : 'not-allowed',
+                            opacity: pwdloading ? 0.6 : 1,
                         }}
                     >
-                        {loading ? "Verifying..." : "Verify OTP"}
+                        {pwdloading ? "Changing Password..." : "Change Password"}
                     </button>
+
+
                 </form>
 
             </div>

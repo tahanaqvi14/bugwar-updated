@@ -61,26 +61,56 @@ const resolvers = {
             const UserModel = getUserModel("Users");
             const { email, username } = args;
 
-            const emailExists = await UserModel.findOne({ email });
-            if (emailExists) {
-                return {
-                    success: false,
-                    message: "Email already exists"
-                };
+            if (username!='null') {
+                const emailExists = await UserModel.findOne({ email });
+                if (emailExists) {
+                    return {
+                        success: false,
+                        message: "Email already exists"
+                    };
+                }
+    
+                const usernameExists = await UserModel.findOne({ username });
+                if (usernameExists) {
+                    return {
+                        success: false,
+                        message: "Username already exists"
+                    };
+                }
             }
+            else{
 
-            const usernameExists = await UserModel.findOne({ username });
-            if (usernameExists) {
-                return {
-                    success: false,
-                    message: "Username already exists"
-                };
             }
 
             const result = await Email(email);
             return {
                 success: true,
                 message: result.message
+            };
+        },
+
+        changepwdd: async (parent, args, context) => {
+            const UserModel = getUserModel("Users");
+            const { username,pwd } = args;
+            const pass = await Authenticator({ password: pwd });
+            try {
+                const updatedUser = await UserModel.findOneAndUpdate(
+                    { username},
+                    {
+                        password: pass.hash,
+                    },
+                    { new: true }
+                )
+            } catch (error) {
+                return {
+                    success: false,
+                    message: error
+                };
+                
+            }
+            return {
+                success: true,
+                message: 'Success'
             };
         },
 
@@ -123,6 +153,8 @@ const resolvers = {
 
         },
 
+        
+
 
 
         user_creation: async (parent, args) => {
@@ -130,13 +162,13 @@ const resolvers = {
                 const UserModel = getUserModel('Users');
                 const fetchedinfo = args.input;
                 const username = fetchedinfo.username;
-                const user_all_detail = await Authenticator(fetchedinfo);
+                const user_all_detail = await Authenticator(fetchedinfo.password);
                 await UserModel.create({
-                    displayname: user_all_detail.displayname,
-                    username: user_all_detail.username,
+                    displayname: fetchedinfo.displayname,
+                    username: fetchedinfo.username,
                     password: user_all_detail.hash,
                     email:fetchedinfo.email,
-                });
+                })
                 return {
                     success: true,
                     message: 'User created successfully'

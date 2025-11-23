@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef,useEffect } from 'react';
 import { useMutation, useQuery, gql } from '@apollo/client';
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -10,6 +10,8 @@ import save from "./images/save.svg";
 import cross from "./images/cross.svg";
 import { useApolloClient } from "@apollo/client";
 import History from './History';
+import Changepwd from './Changepwd';
+import './components/style.css'
 
 
 
@@ -40,18 +42,27 @@ const GET_PROFILE_INFO = gql`
             }
   }`
 
+  const SEND_EMAIL_MUTATION = gql`
+  mutation SendEmail($email: String!, $username: String!) {
+    send_email(email: $email, username: $username) {
+      success
+      message
+    }
+  }
+`;
+
 
 
 const Profile = () => {
     const client = useApolloClient();
     const navigate = useNavigate();
     const [showOTPPage, setShowOTPPage] = useState(false)
-
+    const btnRef = useRef();
     // GraphQL hooks
     const { data, loading, error } = useQuery(GET_PROFILE_INFO);
     const [updateProfile] = useMutation(PROFILE_MUTATION);
     const [logoutProfile] = useMutation(LOGOUT_MUTATION);
-
+    const [sendEmail] = useMutation(SEND_EMAIL_MUTATION);
 
     const users = data?.FindUserForProfile;
 
@@ -59,7 +70,7 @@ const Profile = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [displayName, setDisplayName] = useState('');
     const [tempName, setTempName] = useState('');
-
+    const [userData, setUserData] = useState({});
     // Update state when query data arrives
     useEffect(() => {
         if (users) {
@@ -74,6 +85,19 @@ const Profile = () => {
             return () => clearTimeout(timer);
         }
     }, [error, navigate]);
+
+
+    function showLoader() {
+        btnRef.current.disabled = true;
+        document.getElementById('submit-button').innerHTML = '<div id="loader"></div>';
+        document.getElementById('submit-button').classList.remove('button1');
+    
+      }
+      function hideLoader() {
+        btnRef.current.disabled = false;
+        document.getElementById('submit-button').innerHTML = 'Change Password';
+        document.getElementById('submit-button').classList.add('button1');
+      }
 
     // Handlers
     const handleEditClick = () => {
@@ -148,6 +172,15 @@ const Profile = () => {
     }
 
     async function changepwd() {
+        showLoader();
+        
+        const { data } = await sendEmail({ variables: { email: users?.email, username:'null' } })
+        setUserData({ username:users?.username,message: data.send_email.message });
+        console.log(data);
+        if (!data.send_email.success) {
+          return toast.error(data.send_email.message);
+        }
+        hideLoader()
         setShowOTPPage(true);
     }
 
@@ -229,11 +262,12 @@ const Profile = () => {
                         >
                             Logout 🚪
                         </button>
-
+                    {/* CHANGE PASSWORD BUTTON */}
                         <button
+                            ref={btnRef}
                             onClick={changepwd}
-                            className="text-2xl font-bold text-[#b84b00] transition-transform duration-200 cursor-pointer"
-
+                            className="text-2xl font-bold w-auto text-[#b84b00] button1 cursor-pointer"
+                            id='submit-button'
                         >
                             Change Password
                         </button>
@@ -258,8 +292,8 @@ const Profile = () => {
                         justifyContent: "center",
                         zIndex: 999,
                     }}>
-                    <Secondpag
-                        userData={users.email}
+                    <Changepwd
+                        userData={userData}
                         onClose={() => setShowOTPPage(false)} />
                 </div>
             )}
