@@ -28,10 +28,6 @@ const user=mongoose.Schema({
         type: String,
         default: 'Rookie'
     },
-    challenges_completed: {
-        type: [String],
-        default: []
-    },
     email:{
         type:String,
         minlength:1,
@@ -42,10 +38,6 @@ const user=mongoose.Schema({
     sessiontoken:{
         type:Boolean,
         default:false
-    },
-    totalWins: {
-        type: Number,
-        default: 0
     },
     total_matches: {
         type: [String], // or Number if just a count
