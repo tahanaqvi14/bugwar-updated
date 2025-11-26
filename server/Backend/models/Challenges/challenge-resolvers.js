@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { getUserModel } from '../../utils/getUserModel.js'
 import Code from '../../code_verification/Code.js'
 import isadminloggedin from '../../middleware/isadminloggedin.js';
@@ -25,10 +26,8 @@ const challenge_resolvers = {
             const myId = args.idnum;
             const username = args.username;
             const UserModel = getUserModel('Users');
-
             // Get user info
             const userinfo = await UserModel.findOne({ username });
-
             const userLevel = userinfo?.sub_name?.toLowerCase();
 
             // Map user info to difficulty
@@ -40,22 +39,31 @@ const challenge_resolvers = {
 
             const ChallengeModel = getUserModel('Challenges');
 
-            // Get all challenges of the right difficulty excluding myId
+            // Safely handle exclusion ID
+            let excludeId = null;
+            if (mongoose.Types.ObjectId.isValid(myId)) {
+                excludeId = new mongoose.Types.ObjectId(myId);
+            }
+
+            // Get all challenges with difficulty, optionally excluding myId
             const challenges = await ChallengeModel.find({
                 difficulty: new RegExp(`^${difficultyFilter}$`, 'i'),
-                id_number: { $ne: myId }
-            })
+                ...(excludeId ? { _id: { $ne: excludeId } } : {})
+            });
 
             if (!challenges.length) return null;
 
             // Pick a random challenge from the filtered set
             const randomIndex = Math.floor(Math.random() * challenges.length);
             const challenge = challenges[randomIndex];
+
+            // console.log('challenge', challenge);
             return challenge;
         },
         checking_user_code: async (parent, args, context) => {
             const ChallengeModel = getUserModel('Challenges')
-            const challenge = await ChallengeModel.find({ id_number: args.input.challengeid })
+            const challenge = await ChallengeModel.findById(args.input.challengeid);
+            console.log('challeasdange',challenge)
             const result = await Code(args.input.code, challenge)
             console.log(result);
             return result;
@@ -64,7 +72,8 @@ const challenge_resolvers = {
     Mutation: {
         deleteChallenge: async (parent, args, context) => {
             const db = getUserModel('Challenges');
-            const challenge = await db.findOne({ id_number: args.id_number });
+            const challenge = await db.findById(args.id_number);
+            challenge
 
             if (!challenge) throw new Error("Challenge not found");
 
@@ -74,14 +83,14 @@ const challenge_resolvers = {
         },
         updateChallenge: async (parent, args, context) => {
             const db = getUserModel('Challenges')
-            const challenge = await db.findOne({ id_number: args.input.id_number });
+            const challenge = await db.findOne({ _id: args.input._id });
             if (!challenge) throw new Error("Challenge not found");
 
             const input = args.input;
 
             // Only update fields that changed
             Object.keys(input).forEach(key => {
-                if (key === "id_number") return; // never overwrite id
+                if (key === "_id") return; // never overwrite id
                 const newValue = input[key];
                 const oldValue = challenge[key];
 
@@ -96,11 +105,7 @@ const challenge_resolvers = {
         createChallenge: async (_parent, args, context) => {
             try {
                 const Challenge = getUserModel('Challenges');
-
-                const count = await Challenge.countDocuments();
-
                 await Challenge.create({
-                    id_number: count + 1,
                     function_name: args.input.function_name,
                     problem_statement: args.input.problem_statement,
                     difficulty: args.input.difficulty,

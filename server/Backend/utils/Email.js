@@ -13,8 +13,8 @@ export default async function Email(recipientEmail) {
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: 'competitivecodingarena@gmail.com', // your email
-        pass: 'lzgq ttbh dxbr hrrn',              // Gmail app password
+        user: 'competitivecodingarena@gmail.com', 
+        pass: 'lzgq ttbh dxbr hrrn',              
       },
     });
 

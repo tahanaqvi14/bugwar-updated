@@ -39,6 +39,7 @@ const GET_PROFILE_INFO = gql`
             displayname
             username
             email
+            sub_name
             }
   }`
 
@@ -206,6 +207,7 @@ const Profile = () => {
                         <div>
                             <p className="text-3xl font-semibold drop-shadow-sm">Username</p>
                             <p className="text-2xl text-[#b36b00]">{users?.username || '...'}</p>
+                            <p className="text-xl text-[#FFC83D]">{users?.sub_name || '...'}</p>
                         </div>
                     </div>
 

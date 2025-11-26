@@ -6,7 +6,7 @@ import "react-toastify/dist/ReactToastify.css";
 
 const CREATE_CHALLENGE = gql`
   mutation createChallenge($input: ChallengeInput!) {
-    createChallenge(input: $input)
+    result: createChallenge(input: $input)
   }
 `;
 
@@ -102,7 +102,6 @@ const Newchallenge = () => {
       const { data } = await createChallengeMutation({
         variables: {
           input: {
-            id_number: 0,
             function_name,
             problem_statement,
             difficulty,
@@ -110,8 +109,8 @@ const Newchallenge = () => {
           },
         },
       });
-
-      if (data && data.createChallenge === true) {
+      console.log(data);
+      if (data.result === true) {
         toast.success("Problem Created Successfully!");
 
         setTimeout(() => window.location.reload(), 1500);

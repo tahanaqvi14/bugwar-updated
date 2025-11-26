@@ -92,7 +92,7 @@ const resolvers = {
         changepwdd: async (parent, args, context) => {
             const UserModel = getUserModel("Users");
             const { username,pwd } = args;
-            const pass = await Authenticator({ password: pwd });
+            const pass = await Authenticator(pwd);
             try {
                 const updatedUser = await UserModel.findOneAndUpdate(
                     { username},
@@ -148,15 +148,10 @@ const resolvers = {
                     success: false,
                     message: error
                 }
-            }
-
-
+            }   
         },
 
-        
-
-
-
+    
         user_creation: async (parent, args) => {
             try {
                 const UserModel = getUserModel('Users');

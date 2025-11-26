@@ -9,6 +9,7 @@ import trophy from "./images/trophy.svg";
 import { useNavigate } from 'react-router-dom';
 import Secondpage from "./Secondpage";
 
+//arif ka module ha yeh
 
 const DISPLAY_NAME_QUERY = gql`
   query MainMenu {

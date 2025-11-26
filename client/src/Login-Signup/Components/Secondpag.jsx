@@ -3,7 +3,7 @@ import { useMutation, gql } from '@apollo/client'
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useNavigate } from 'react-router-dom';
-
+import { useStore } from '../../../store/Store';
 
 
 const CREATE_USER_MUTATION = gql`
@@ -23,21 +23,21 @@ const Secondpag = ({ onClose, userData }) => {
     const btnRef = useRef(null);
     const [create_User] = useMutation(CREATE_USER_MUTATION);
 
-    function showLoader() {
-        btnRef.current.disabled = true;
-        document.getElementById('submit-button').innerHTML = '<div id="loader"></div>';
-        document.getElementById('submit-button').classList.remove('button1');
+    // function showLoader() {
+    //     btnRef.current.disabled = true;
+    //     document.getElementById('submit-button').innerHTML = '<div id="loader"></div>';
+    //     document.getElementById('submit-button').classList.remove('button1');
+    // }
 
-    }
-    function hideLoader() {
-        btnRef.current.disabled = false;
-        document.getElementById('submit-button').innerHTML = 'Create Account';
-        document.getElementById('submit-button').classList.add('button1');
-    }
+    // function hideLoader() {
+    //     btnRef.current.disabled = false;
+    //     document.getElementById('submit-button').innerHTML = 'Create Account';
+    //     document.getElementById('submit-button').classList.add('button1');
+    // }
 
 
     const handleOtpChange = (index, value) => {
-        if (value && !/^\d$/.test(value)) return;
+        if (value && !/^\d$/.test(value)) return toast.error("Only digits (0-9) are allowed"); 
 
         const newOtp = [...otp];
         newOtp[index] = value;
@@ -69,12 +69,12 @@ const Secondpag = ({ onClose, userData }) => {
 
     const handleVerifyOTP = async (e) => {
         e.preventDefault();
-        showLoader();
+        // showLoader();
         const otpValue = otp.join('');
 
-        if (otpValue.length !== 6) return;
-
+        
         try {
+            if (otpValue.length !== 6) return toast.error('Wrong Otp');
             setLoading(true);
             console.log(userData)
             if (otpValue === userData.message) {
@@ -107,7 +107,7 @@ const Secondpag = ({ onClose, userData }) => {
             toast.error(err?.message || "Something went wrong");
         } finally {
             setLoading(false);
-            hideLoader();
+            // hideLoader();
         }
     }
     return (

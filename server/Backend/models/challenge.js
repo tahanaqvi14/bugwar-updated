@@ -39,7 +39,6 @@ const TestcaseSchema = new mongoose.Schema({
 
 
 const challenge = mongoose.Schema({
-  id_number: { type: Number, required: true, unique: true },
   function_name: { type: String, required: true, trim: true },
   difficulty: { type: String, required: true, trim: true },
   testcases: { type: [TestcaseSchema], default: [] },

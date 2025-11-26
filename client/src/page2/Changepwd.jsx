@@ -38,7 +38,7 @@ const Changepwd = ({ onClose, userData }) => {
             otpVerifierBtn.style.cursor = 'not-allowed';
         }
     }
-    
+
     function showTickMark() {
         const otpVerifierBtn = document.getElementById('otpverfier');
         if (otpVerifierBtn) {
@@ -101,69 +101,63 @@ const Changepwd = ({ onClose, userData }) => {
 
     const handleVerifyOTP = async (e) => {
         e.preventDefault();
-        showLoader();
         const otpValue = otp.join('');
 
-        if (otpValue.length !== 6) return;
+        if (otpValue.length !== 6) {
+            return toast.error("Please enter the 6-digit OTP");
+        }
+
+        showLoader(); // only show loader if OTP length is 6
+        setLoading(true);
 
         try {
-            setLoading(true);
-            console.log(userData)
-            if (otpValue == userData.message) {
-                showTickMark();
+            if (otpValue === userData.message) {
+                showTickMark(); // tick mark stays
                 toast.success("OTP Verified Successfully");
-                // const { data } = await create_User({
-                //     variables: {
-                //         input: {
-                //             username: userData.username,
-                //             password: userData.password,
-                //         }
-                //     }
-                // });
-            }
-            else {
+            } else {
                 toast.error("Wrong OTP | Try Again");
-                hideLoader();
+                hideLoader(); // reset button only if wrong OTP
             }
         } catch (err) {
             toast.error(err?.message || "Something went wrong");
             hideLoader();
         } finally {
-            setLoading(false);
+            setLoading(false); // stop the React loading state
         }
-    }
+    };
 
     const verifypwd = async (e) => {
-        e.preventDefault();
         setpwdloading(true);
         passwordRef.current.disabled = true;
+
         let password = inputValue;
+        console.log(password);
+
         try {
             // Password validation
-            if (!password) {
-                toast.error("Password is required");
-                return;
-            }
-            if (password.length < 8) {
-                toast.error("Password must be at least 8 characters");
-                return;
-            }
-            if (password.length > 20) {
-                toast.error("Password must be at most 20 characters");
-                return;
-            }
+            if (!password) return toast.error("Password is required");
+            if (password.length < 8) return toast.error("Password must be at least 8 characters");
+            if (password.length > 20) return toast.error("Password must be at most 20 characters");
 
-            const { data } = await update_pwd({ 
-                variables: { 
-                    username: userData?.username || '', 
-                    pwd: password 
-                } 
+            const { data } = await update_pwd({
+                variables: {
+                    username: userData?.username || '',
+                    pwd: password
+                }
             });
+
             console.log(data);
+
             if (data?.changepwdd?.success) {
-                toast.success(data.changepwdd.message || "Password changed successfully");
+                toast.success("Password changed successfully");
+
+                // 🔥 Reload after 1 second so the toast shows before refresh
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1200);
+
             } else {
-                toast.error(data?.changepwdd?.message || "Failed to change password");
+                toast.error("Failed to change password");
             }
 
         } catch (error) {
@@ -172,7 +166,7 @@ const Changepwd = ({ onClose, userData }) => {
             setpwdloading(false);
             passwordRef.current.disabled = false;
         }
-    }
+    };
     return (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
             <div
@@ -281,7 +275,7 @@ const Changepwd = ({ onClose, userData }) => {
                         marginBottom: '20px',
                         fontStyle: 'italic'
                     }}>
-                        When you confirm the OTP, your account will be created
+                        After confirming the OTP, you can set your new password.
                     </p>
                 </form>
 

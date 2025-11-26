@@ -10,16 +10,14 @@ import Popup from './Popup'
 
 
 const GET_CHALLENGE = gql`
-  query Get_challenge($idnum: Int,$username: String) {
+  query Get_challenge($idnum: ID,$username: String) {
     Get_challenge(idnum: $idnum,username: $username) {
       function_name
       problem_statement
-      id_number
+      _id
     }
   }
 `;
-
-
 
 
 const GET_RESULT_OF_CODE = gql`
@@ -50,6 +48,7 @@ const CodeEditor = () => {
   const [getChallenge, { data: challenge_data, loading: challenge_loading, error: challenge_error }] =
     useLazyQuery(GET_CHALLENGE, {
       onCompleted: (data) => {
+        console.log(data)
         console.log(clientusername);
         console.log("✅ getChallenge() called. Data received:", data);
       },
@@ -97,7 +96,7 @@ const CodeEditor = () => {
 
 
   useEffect(() => {
-    getChallenge({ variables: { idnum: -1, username: clientusername } });
+    getChallenge({ variables: { idnum : "-1", username: clientusername } });
     if (socket) {
       console.log(`Socket connected in codeeditor component:${socket.id}`);
     }
@@ -211,10 +210,10 @@ const CodeEditor = () => {
     const code = editorRef.current.getValue();
     setIsRunning(true);
     setRunningAction(actionType);
-    console.log(challenge_data.Get_challenge.id_number)
+    console.log(challenge_data.Get_challenge._id)
     try {
       const { data } = await getcode({
-        variables: { input: { code, challengeid: challenge_data.Get_challenge.id_number } },
+        variables: { input: { code, challengeid: challenge_data.Get_challenge._id } },
       });
       console.log(data.checking_user_code);
       // if(data.checking_user_code.message.results.)
@@ -233,7 +232,7 @@ const CodeEditor = () => {
           // editorRef.current.setValue(initialCode);
 
           setTimeout(() => {
-            getChallenge({ variables: { idnum: challenge_data.Get_challenge.id_number , username: clientusername} });
+            getChallenge({ variables: { idnum: challenge_data.Get_challenge._id , username: clientusername} });
             setOutput("");
             setconsolelogs([]);
             setresult([]);

@@ -6,13 +6,13 @@ import { useStore  } from '../../store/Store';
 
 const Secondpage = ({ onClose }) => {
   const setData = useStore((state) => state.setData);
-
+  const setclientusername = useStore((state) => state.setclientusername);
   const socket = useContext(SocketContext);
   const navigate = useNavigate();
 
   const [textToDisplay, setTextToDisplay] = useState('Searching for a user...');
   // const [usernames, setUsernames] = useState([]);
-  const [personal_username, setPersonalUsername] = useState('');
+  // const [personal_username, setPersonalUsername] = useState('');
 
   useEffect(() => {
     if (!socket) return;
@@ -20,7 +20,8 @@ const Secondpage = ({ onClose }) => {
     console.log(`Socket connected in Secondpage: ${socket.id}`);
 
     socket.on('welcome', (data) => {
-      setPersonalUsername(data.username);
+      // setPersonalUsername();
+      setclientusername(data.username)
     });
 
     socket.emit('joinRoom');

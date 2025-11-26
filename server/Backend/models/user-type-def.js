@@ -7,19 +7,18 @@ const typeDefs = gql`
         password:String!
         points:Int
         sub_name:String
-        challenges_completed:[String!]
-        totalWins:Int
         total_matches:Int
         email:String
         sessiontoken:Boolean
     }
 
-    
+
     type Match {
         matchId: String!
         players: [user!]!
     }
-    
+
+
     type question{
         problem_statement:String!
         function_name:String!
@@ -73,16 +72,17 @@ const typeDefs = gql`
     type Mutation{
         user_creation(input:createuser!):CreateUserResponse!
         send_email(email:String,username:String):CreateUserResponse!
-        changepwdd(username:String,pwd:String):CreateUserResponse!
         user_login(input:loginuser!):CreateUserResponse!
+
+        changepwdd(username:String,pwd:String):CreateUserResponse!
+        
         admin_login(input:loginuser!):CreateUserResponse!
+
         Update(input:updateuser):user
         logout:CreateUserResponse!
         finduser_and_savematch(input: [inputformatchsaving!]!): Match!
         remove(input: inputformatchsaving):user
-
         runCode(code: String!): RunResult!
-
     }
 `
 export default typeDefs;

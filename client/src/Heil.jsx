@@ -12,7 +12,7 @@ import {
 } from "./components/ui/card"
 import { Input } from "./components/ui/input"
 import { Label } from "./components/ui/label"
-import "./s.css" // Make sure this contains the .clip-custom class
+import "./s.css"
 
 export function Heil() {
   return (

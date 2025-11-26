@@ -78,7 +78,6 @@ const Singup = () => {
       if (password.length > 20) return toast.error("Password must be at most 20 characters");
 
 
-
       const { data } = await sendEmail({ variables: { email, username } })
       console.log(data);
       if (!data.send_email.success) {
@@ -171,6 +170,7 @@ const Singup = () => {
           </button>
         </form>
       </div>
+
 
       {/* OTP Page */}
       {showOTPPage && (

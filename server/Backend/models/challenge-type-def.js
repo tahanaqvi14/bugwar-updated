@@ -5,7 +5,7 @@ const challenge_typeDefs = gql`
     type challenge{
         function_name:String
         problem_statement:String
-        id_number:Int
+        _id: ID!
         testcases: [testcase]
         difficulty:String
     }
@@ -18,7 +18,7 @@ const challenge_typeDefs = gql`
         
     input checking_code{
         code:String!
-        challengeid:Int!
+        challengeid:ID!
     }
 
     type TestCaseResult {
@@ -46,22 +46,22 @@ const challenge_typeDefs = gql`
     }
 
     input ChallengeInput {
-        id_number:Int
-        function_name: String
-        problem_statement: String
+        _id: ID
+        function_name: String!
+        problem_statement: String!
         testcases: [TestCaseInput]
         difficulty: String
     }
 
     type Query{
-        Get_challenge(idnum:Int,username:String):challenge
+        Get_challenge(idnum:ID,username:String):challenge
         checking_user_code(input:checking_code!):CodeResponse!
         Get_challengeall:[challenge]
         check:Boolean
     }
 
     type Mutation {
-        deleteChallenge(id_number: Int!): Boolean!
+        deleteChallenge(id_number: ID!): Boolean!
         updateChallenge(input: ChallengeInput):challenge
         createChallenge(input: ChallengeInput):Boolean!
     }

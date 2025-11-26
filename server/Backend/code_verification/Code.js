@@ -39,7 +39,7 @@ const Code = async (userCode, challengeinfo) => {
         // Ensure the user code exports the function
         const userFunction = vmInstance.run(`
             ${userCode}
-            module.exports = ${challengeinfo[0].function_name};
+            module.exports = ${challengeinfo.function_name};
         `);
 
         // Execute test cases
@@ -55,7 +55,7 @@ const Code = async (userCode, challengeinfo) => {
 
         // Execute test cases
         
-        for (const tc of challengeinfo[0].testcases) {
+        for (const tc of challengeinfo.testcases) {
             let output, passed, error = null;
             output = userFunction(...tc.case);
             if (output === tc.expected) {

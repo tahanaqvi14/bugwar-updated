@@ -5,12 +5,14 @@ import { useQuery, gql, useMutation } from "@apollo/client";
 import { ToastContainer, toast } from "react-toastify"; // <-- react-toastify import
 import "react-toastify/dist/ReactToastify.css";
 
+
+//saad ka module ha yeh
 const GET_CHALLENGE = gql`
   query Get_challengeall {
     Get_challengeall {
       function_name
       problem_statement
-      id_number
+      _id
       difficulty
       testcases {
         case
@@ -23,7 +25,7 @@ const GET_CHALLENGE = gql`
 const UPDATE_CHALLENGE = gql`
   mutation UpdateChallenge($input: ChallengeInput!) {
     updateChallenge(input: $input) {
-      id_number
+      _id
       function_name
       problem_statement
       difficulty
@@ -36,7 +38,7 @@ const UPDATE_CHALLENGE = gql`
 `;
 
 const DELETE = gql`
-  mutation ($id: Int!) {
+  mutation ($id: ID!) {
     deleteChallenge(id_number: $id)
   }
 `;
@@ -84,7 +86,7 @@ const Admin = () => {
     const { name, value } = e.target;
     setLocalData((prev) =>
       prev.map((p) =>
-        p.id_number === problem.id_number ? { ...p, [name]: value } : p
+        p._id === problem._id ? { ...p, [name]: value } : p
       )
     );
   };
@@ -92,7 +94,7 @@ const Admin = () => {
   const handleTestcaseChange = (problemId, index, field, value) => {
     setLocalData((prev) =>
       prev.map((p) => {
-        if (p.id_number !== problemId) return p;
+        if (p._id !== problemId) return p;
         const newTestcases = [...p.testcases];
         if (field === "case") {
           const nums = value
@@ -111,7 +113,7 @@ const Admin = () => {
   const handleAddTestcase = (problemId) => {
     setLocalData((prev) =>
       prev.map((p) => {
-        if (p.id_number !== problemId) return p;
+        if (p._id !== problemId) return p;
         const newTestcases = [...p.testcases, { case: [], expected: "" }];
         return { ...p, testcases: newTestcases };
       })
@@ -128,7 +130,7 @@ const Admin = () => {
       const { data } = await updateChallengeMutation({
         variables: {
           input: {
-            id_number: problem.id_number,
+            _id: problem._id,
             function_name: problem.function_name,
             problem_statement: problem.problem_statement,
             difficulty: problem.difficulty,
@@ -139,7 +141,7 @@ const Admin = () => {
 
       setLocalData((prev) =>
         prev.map((p) =>
-          p.id_number === problem.id_number ? data.updateChallenge : p
+          p._id === problem._id ? data.updateChallenge : p
         )
       );
       setEditingId(null);
@@ -155,7 +157,7 @@ const Admin = () => {
 
     try {
       await del({ variables: { id } });
-      setLocalData((prev) => prev.filter((p) => p.id_number !== id));
+      setLocalData((prev) => prev.filter((p) => p._id !== id));
       toast.success("Challenge deleted successfully!"); // <-- react-toastify
     } catch (error) {
       console.error(error);
@@ -194,17 +196,17 @@ const Admin = () => {
         {/* Accordion */}
         <div className="space-y-5">
           {localData.map((problem) => {
-            const isOpen = openId === problem.id_number;
-            const isEditing = editingId === problem.id_number;
+            const isOpen = openId === problem._id;
+            const isEditing = editingId === problem._id;
 
             return (
               <div
-                key={problem.id_number}
+                key={problem._id}
                 className="bg-[#fff4d6] p-4 rounded-2xl border-4 border-[#7f4f0a]"
               >
                 {/* Accordion Header */}
                 <button
-                  onClick={() => toggleAccordion(problem.id_number)}
+                  onClick={() => toggleAccordion(problem._id)}
                   className="button1 w-full flex justify-between items-center text-2xl text-[#7a4f0a] accordion-btn"
                 >
                   <span>{problem.function_name}</span>
@@ -278,7 +280,7 @@ const Admin = () => {
                                     value={tc.case.join(",")}
                                     onChange={(e) =>
                                       handleTestcaseChange(
-                                        problem.id_number,
+                                        problem._id,
                                         idx,
                                         "case",
                                         e.target.value
@@ -297,7 +299,7 @@ const Admin = () => {
                                     value={tc.expected}
                                     onChange={(e) =>
                                       handleTestcaseChange(
-                                        problem.id_number,
+                                        problem._id,
                                         idx,
                                         "expected",
                                         e.target.value
@@ -327,14 +329,14 @@ const Admin = () => {
                           </button>
                         ) : (
                           <button
-                            onClick={() => handleEditClick(problem.id_number)}
+                            onClick={() => handleEditClick(problem._id)}
                             className="px-3 py-1 bg-[#f7b63d] border-4 border-[#7f4f0a] rounded-xl shadow-md no-hover"
                           >
                             Edit
                           </button>
                         )}
                         <button
-                          onClick={() => handleDelete(problem.id_number)}
+                          onClick={() => handleDelete(problem._id)}
                           className="px-3 py-1 bg-red-600 text-white rounded-xl shadow-md"
                         >
                           Delete
