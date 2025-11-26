@@ -8,7 +8,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Secondpage from './page2/Secondpage';
 import Login from './Login-Signup/Components/Login';
 import Singup from './Login-Signup/Components/Singup';
-import Gamingpage from './page3/Gamingpage'
+
 import CodeEditor from './page3/CodeEditor';
 import Mainmenu from './page2/Mainmenu'
 import Leaderboard from './page2/Leaderboard';
@@ -62,7 +62,6 @@ const App = () => {
             <Route path="/codeeditor" element={<CodeEditor />}/>
             {/* <Route path="/gamepage" element={<CodeEditor />}/> */}
             {/* <Route path="/" element={<Login connectSocket={connectSocket} />} /> */}
-            {/* <Route path="/gamepage" element={<Gamingpage />} /> */}
             <Route path="/signup" element={<Singup />}/>
 
             {/* <Route path="/page2" element={<Secondpage />} /> */}

@@ -47,7 +47,7 @@ const Navbar = () => {
     });
 
     useEffect(() => {
-        if (!data || !data.Get_matchinfo || DC) return; // ✅ Stop timer when DC is true
+        if (!data || !data.Get_matchinfo || DC) return;
 
         const match = data.Get_matchinfo; // ✅ define match here
 
@@ -73,10 +73,8 @@ const Navbar = () => {
         }, 50);
 
         return () => clearInterval(intervalRef.current); // ✅ Using intervalRef
-    }, [data, isEnded, DC]); // ✅ Added DC to dependencies
+    }, [data, isEnded, DC]);
 
-    // if (loading) return <p>Loading match…</p>;
-    // if (error) return <p>Error: {error.message}</p>;
 
 
     // Format time nicely
@@ -86,16 +84,6 @@ const Navbar = () => {
         const s = total % 60;
         return `${m}:${s.toString().padStart(2, "0")}`;
     };
-
-
-    // useEffect(() => {
-    //     if (timeLeft <= 0) return;
-    //     const timer = setTimeout(() => setTimeLeft((t) => t - 1), 1000);
-    //     return () => clearTimeout(timer);
-    //   }, [timeLeft]);
-    //   const minutes = String(Math.floor(timeLeft / 60)).padStart(2, "0");
-    //   const seconds = String(timeLeft % 60).padStart(2, "0");
-
 
     useEffect(() => {
         const tl = gsap.timeline();

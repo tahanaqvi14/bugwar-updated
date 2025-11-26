@@ -2,7 +2,6 @@ import { NodeVM } from 'vm2';
 import vm from 'vm';
 
 const Code = async (userCode, challengeinfo) => {
-    console.log('challengeinfo',challengeinfo)
 
     // Step 1: Pre-validate syntax with vm  class
     try {

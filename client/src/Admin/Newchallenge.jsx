@@ -86,6 +86,12 @@ const Newchallenge = () => {
       toast.error("Test case inputs must be integers, separated by commas!");
       return;
     }
+    
+    if (!isValidIntegerList(testcase1sol) || !isValidIntegerList(testcase2sol)) {
+      toast.error("Test case solution must be integer");
+      return;
+    }
+
 
     const formattedTestcases = [
       {

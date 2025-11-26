@@ -65,60 +65,68 @@ const History = ({ username }) => {
           {loading && <p className="text-center text-lg">Loading matches...</p>}
           {error && <p className="text-center text-red-600">Failed to load matches.</p>}
 
-          {/* Scrollable Table Slider */}
+          {/* Scrollable Table Slider / Empty State */}
           {!loading && !error && (
-            <div className="w-full max-w-[800px] h-[400px] overflow-x-hidden overflow-y-auto border border-[#7f4f0a] rounded-xl shadow-md mx-auto scrollbar-thin scrollbar-thumb-[#7f4f0a] scrollbar-track-[#fff4d6]">
-              <div className="min-w-[700px]">
-                <table className="table-auto border-collapse border border-[#7f4f0a] text-center w-full">
-                  <thead>
-                    <tr className="bg-[#fff4d6]">
-                      <th className="border border-[#7f4f0a] px-4 py-2">Date & Time</th>
-                      <th className="border border-[#7f4f0a] px-4 py-2">Player 1 & Score</th>
-                      <th className="border border-[#7f4f0a] px-4 py-2">Player 2 & Score</th>
-                      <th className="border border-[#7f4f0a] px-4 py-2">Status</th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {matches.map((match) => {
-                      const p1 = match.participants[0];
-                      const p2 = match.participants[1];
-
-                      const isDraw = p1.points === p2.points;
-                      const p1Win = p1.points > p2.points;
-                      const p2Win = p2.points > p1.points;
-
-                      let p1Icon = "";
-                      let p2Icon = "";
-
-                      if (match.status === "Completed") {
-                        if (isDraw) {
-                          p1Icon = drawIcon;
-                          p2Icon = drawIcon;
-                        } else if (p1Win) {
-                          p1Icon = crown;
-                        } else if (p2Win) {
-                          p2Icon = crown;
-                        }
-                      }
-
-                      return (
-                        <tr key={match.matchId} className="hover:bg-[#fff1c0]">
-                          <td className="border border-[#7f4f0a] px-2 py-1">{formatDate(match.matchDate)}</td>
-                          <td className="border border-[#7f4f0a] px-2 py-1">{p1Icon} {p1.displayname} ({p1.points})</td>
-                          <td className="border border-[#7f4f0a] px-2 py-1">{p2Icon} {p2.displayname} ({p2.points})</td>
-                          <td className="border border-[#7f4f0a] px-2 py-1">
-                            {match.status === "Completed"
-                              ? (isDraw ? "Draw" : "Completed")
-                              : "Incomplete"}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+            matches.length === 0 ? (
+              <div className="w-full max-w-[800px] h-[400px] flex items-center justify-center mx-auto">
+                <p className="text-xl font-bold text-[#7f4f0a] text-center">
+                  No matches found — you haven&apos;t played any matches yet.
+                </p>
               </div>
-            </div>
+            ) : (
+              <div className="w-full max-w-[800px] h-[400px] overflow-x-hidden overflow-y-auto border border-[#7f4f0a] rounded-xl shadow-md mx-auto scrollbar-thin scrollbar-thumb-[#7f4f0a] scrollbar-track-[#fff4d6]">
+                <div className="min-w-[700px]">
+                  <table className="table-auto border-collapse border border-[#7f4f0a] text-center w-full">
+                    <thead>
+                      <tr className="bg-[#fff4d6]">
+                        <th className="border border-[#7f4f0a] px-4 py-2">Date & Time</th>
+                        <th className="border border-[#7f4f0a] px-4 py-2">Player 1 & Score</th>
+                        <th className="border border-[#7f4f0a] px-4 py-2">Player 2 & Score</th>
+                        <th className="border border-[#7f4f0a] px-4 py-2">Status</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {matches.map((match) => {
+                        const p1 = match.participants[0];
+                        const p2 = match.participants[1];
+
+                        const isDraw = p1.points === p2.points;
+                        const p1Win = p1.points > p2.points;
+                        const p2Win = p2.points > p1.points;
+
+                        let p1Icon = "";
+                        let p2Icon = "";
+
+                        if (match.status === "Completed") {
+                          if (isDraw) {
+                            p1Icon = drawIcon;
+                            p2Icon = drawIcon;
+                          } else if (p1Win) {
+                            p1Icon = crown;
+                          } else if (p2Win) {
+                            p2Icon = crown;
+                          }
+                        }
+
+                        return (
+                          <tr key={match.matchId} className="hover:bg-[#fff1c0]">
+                            <td className="border border-[#7f4f0a] px-2 py-1">{formatDate(match.matchDate)}</td>
+                            <td className="border border-[#7f4f0a] px-2 py-1">{p1Icon} {p1.displayname} ({p1.points})</td>
+                            <td className="border border-[#7f4f0a] px-2 py-1">{p2Icon} {p2.displayname} ({p2.points})</td>
+                            <td className="border border-[#7f4f0a] px-2 py-1">
+                              {match.status === "Completed"
+                                ? (isDraw ? "Draw" : "Completed")
+                                : "Incomplete"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )
           )}
 
         </div>

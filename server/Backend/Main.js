@@ -2,8 +2,6 @@ import express from 'express';
 import dotenv from 'dotenv';
 import connectDB from './DB/Connection.js'
 import cookieParser from 'cookie-parser';
-// import { RedisStore } from 'connect-redis';
-// import { createClient } from 'redis';
 import expressSession from 'express-session';
 import usertypeDefs from './models/user-type-def.js'
 import userresolvers from './models/User/user-resolvers.js'
@@ -54,7 +52,7 @@ const sessionMiddleware =
   expressSession({
     secret: process.env.EXPRESS_SESSION_SECRET,
     resave: false,
-    //       What it means: "Only save the session if something changed"
+    //What it means: "Only save the session if something changed"
 
     // Why set to false:
 
@@ -175,6 +173,7 @@ const roomName = ['room1', 'room2'];
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id)
   socket.on('joinRoom', async () => {
+
     for (let index = 0; index < roomName.length; index++) {
       const roomname = roomName[index];
       const username = socket.request.session.user.username
@@ -193,7 +192,6 @@ io.on('connection', (socket) => {
           roomData[roomname].status = 'ready';
           let roominfo = roomData[roomname];
           let usernames = roominfo.players.map(player => player.username)
-
           const matchinfo = await matchresolvers.Mutation.createMatch(
             null, // parent
             { input: usernames }, // args
@@ -205,9 +203,6 @@ io.on('connection', (socket) => {
             username: p.username,
             score: p.score
           }));
-          setTimeout(() => {
-            io.to(roomname).emit('Gaming_screen', { playerData });
-          }, 6000);
           break;
         }
 
@@ -233,8 +228,8 @@ io.on('connection', (socket) => {
     }
   })
 
-  socket.on('receivesock',(data)=>{
-    socket.emit('send_user',players[data].username);
+  socket.on('receivesock', (data) => {
+    socket.emit('send_user', players[data].username);
   })
 
   socket.on('cancel_search', (socket) => {
@@ -349,8 +344,6 @@ io.on('connection', (socket) => {
         break;
       }
     }
-
-
 
 
     if (!targetRoom) {

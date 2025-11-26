@@ -75,12 +75,14 @@ const typeDefs = gql`
         user_login(input:loginuser!):CreateUserResponse!
 
         changepwdd(username:String,pwd:String):CreateUserResponse!
+        Update(input:updateuser):user
+        logout:CreateUserResponse!
         
         admin_login(input:loginuser!):CreateUserResponse!
 
-        Update(input:updateuser):user
-        logout:CreateUserResponse!
+
         finduser_and_savematch(input: [inputformatchsaving!]!): Match!
+
         remove(input: inputformatchsaving):user
         runCode(code: String!): RunResult!
     }

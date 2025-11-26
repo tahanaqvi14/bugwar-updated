@@ -5,7 +5,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { useNavigate } from 'react-router-dom';
 import account from "./images/account.svg";
 import edit from "./images/edit.svg";
-import sound from "./images/sound.svg";
+
 import save from "./images/save.svg";
 import cross from "./images/cross.svg";
 import { useApolloClient } from "@apollo/client";
@@ -20,7 +20,7 @@ mutation Update($input: updateuser!) {
     Update(input: $input) {
         displayname
         }
-        }
+    }
 `;
 
 const LOGOUT_MUTATION = gql`
@@ -52,6 +52,15 @@ const GET_PROFILE_INFO = gql`
   }
 `;
 
+const DISPLAY_NAME_QUERY = gql`
+  query MainMenu {
+    Main_menu {
+      displayname
+    }
+  }
+`;
+
+
 
 
 const Profile = () => {
@@ -61,7 +70,11 @@ const Profile = () => {
     const btnRef = useRef();
     // GraphQL hooks
     const { data, loading, error } = useQuery(GET_PROFILE_INFO);
-    const [updateProfile] = useMutation(PROFILE_MUTATION);
+    const [updateProfile] = useMutation(PROFILE_MUTATION, {
+        refetchQueries: [{ query: DISPLAY_NAME_QUERY }],
+        awaitRefetchQueries: true,
+      });
+      
     const [logoutProfile] = useMutation(LOGOUT_MUTATION);
     const [sendEmail] = useMutation(SEND_EMAIL_MUTATION);
 
@@ -113,7 +126,7 @@ const Profile = () => {
             setDisplayName(tempName.trim() || "Unnamed");
             setIsEditing(false);
             toast.success("Profile updated successfully!");
-            window.location.reload();
+
         } catch (err) {
             toast.error("Failed to update profile!");
         }

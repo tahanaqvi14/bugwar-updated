@@ -23,6 +23,9 @@ const Popup = () => {
   const DC = useStore((state) => state.DC);
   const matchinfo = useStore((state) => state.data);
 
+
+
+
   const { data, loading, error } = useQuery(GET_MATCH, {
     variables: { matchId: matchinfo.matchId },
     fetchPolicy: "no-cache",

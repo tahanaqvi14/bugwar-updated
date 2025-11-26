@@ -77,3 +77,21 @@ if (res.ok) {
 
 I can also add a **timeline diagram** to your document so the “before vs after” is super clear.
 Do you want me to make that?
+
+
+----------------------------------------------------------- ISSUE 2 -----------------------------------------------------------------------------
+
+window.monaco → this is the global Monaco library.
+It gets loaded once via the script.
+It persists in the browser, even if you navigate away.
+editorRef.current → this is the editor instance created inside your component.
+
+It is tied to the DOM element (containerRef).
+
+You dispose it on unmount, which removes it from the DOM.
+
+The issue:
+
+When you navigate away, editorRef.current.dispose() runs → editor disappears.
+
+When you come back, window.monaco already exists → your code skips creating a new editor instance → so you see only “Loading Editor…” and no editor.

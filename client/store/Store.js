@@ -1,4 +1,3 @@
-// store.js
 import { create } from 'zustand';
 
 export const useStore = create((set) => ({
@@ -8,10 +7,18 @@ export const useStore = create((set) => ({
   isEnded: false,
   setIsEnded: (endState) => set({ isEnded: endState }),
 
-  clientusername:'',
+  clientusername: '',
   setclientusername: (newData) => set({ clientusername: newData }),
 
-  DC:false,
+  DC: false,
   setDC: (endState) => set({ DC: endState }),
 
+  // ✅ Reset everything to initial state
+  resetStore: () =>
+    set({
+      data: '',
+      isEnded: false,
+      clientusername: '',
+      DC: false
+    }),
 }));

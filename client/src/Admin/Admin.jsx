@@ -2,11 +2,10 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./style.css";
 import { useQuery, gql, useMutation } from "@apollo/client";
-import { ToastContainer, toast } from "react-toastify"; // <-- react-toastify import
+import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-
-//saad ka module ha yeh
+// GraphQL queries/mutations
 const GET_CHALLENGE = gql`
   query Get_challengeall {
     Get_challengeall {
@@ -57,7 +56,6 @@ const Admin = () => {
     onCompleted: (d) => setLocalData(d.Get_challengeall),
   });
 
-  // Handle authentication error
   useEffect(() => {
     if (error && error.message.includes("Not authenticated")) {
       setAuthError(true);
@@ -68,10 +66,8 @@ const Admin = () => {
   }, [error, navigate]);
 
   if (loading) return <p>Loading...</p>;
-
   if (error && !error.message.includes("Not authenticated"))
     return <p>Error: {error.message}</p>;
-
   if (authError)
     return (
       <div className="min-h-screen flex justify-center items-center text-red-500 text-2xl font-bold">
@@ -85,9 +81,7 @@ const Admin = () => {
   const handleChange = (e, problem) => {
     const { name, value } = e.target;
     setLocalData((prev) =>
-      prev.map((p) =>
-        p._id === problem._id ? { ...p, [name]: value } : p
-      )
+      prev.map((p) => (p._id === problem._id ? { ...p, [name]: value } : p))
     );
   };
 
@@ -95,16 +89,17 @@ const Admin = () => {
     setLocalData((prev) =>
       prev.map((p) => {
         if (p._id !== problemId) return p;
-        const newTestcases = [...p.testcases];
-        if (field === "case") {
-          const nums = value
-            .split(",")
-            .map((n) => parseFloat(n.trim()))
-            .filter((n) => !isNaN(n));
-          newTestcases[index].case = nums;
-        } else {
-          newTestcases[index][field] = value;
-        }
+
+        const newTestcases = p.testcases.map((tc, idx) => {
+          if (idx !== index) return tc;
+
+          if (field === "case") {
+            return { ...tc, caseStr: value }; // keep string while typing
+          } else {
+            return { ...tc, [field]: value };
+          }
+        });
+
         return { ...p, testcases: newTestcases };
       })
     );
@@ -122,10 +117,28 @@ const Admin = () => {
 
   const handleSave = async (problem) => {
     try {
-      const formattedTestcases = problem.testcases.map((tc) => ({
-        case: tc.case,
-        expected: parseInt(tc.expected, 10),
-      }));
+      // Convert strings to integers, validate
+      const formattedTestcases = problem.testcases.map((tc) => {
+        const arr = (tc.caseStr ?? tc.case.join(","))
+          .split(",")
+          .map((n) => n.trim())
+          .filter((n) => n !== ""); // remove empty strings
+
+        // Validate integers only
+        if (!arr.every((n) => /^-?\d+$/.test(n))) {
+          throw new Error("All testcase values must be integers.");
+        }
+
+        // Validate "expected" is a non-empty integer
+        if (!/^-?\d+$/.test(tc.expected)) {
+          throw new Error(`Expected value in testcase solution must be an integer.`);
+        }
+
+        return {
+          case: arr.map((n) => parseInt(n, 10)),
+          expected: parseInt(tc.expected, 10),
+        };
+      });
 
       const { data } = await updateChallengeMutation({
         variables: {
@@ -140,15 +153,13 @@ const Admin = () => {
       });
 
       setLocalData((prev) =>
-        prev.map((p) =>
-          p._id === problem._id ? data.updateChallenge : p
-        )
+        prev.map((p) => (p._id === problem._id ? data.updateChallenge : p))
       );
       setEditingId(null);
-      toast.success("Challenge updated successfully!"); // <-- react-toastify
+      toast.success("Challenge updated successfully!");
     } catch (err) {
       console.error(err);
-      toast.error("Failed to update challenge."); // <-- react-toastify
+      toast.error(err.message || "Failed to update challenge.");
     }
   };
 
@@ -158,16 +169,14 @@ const Admin = () => {
     try {
       await del({ variables: { id } });
       setLocalData((prev) => prev.filter((p) => p._id !== id));
-      toast.success("Challenge deleted successfully!"); // <-- react-toastify
+      toast.success("Challenge deleted successfully!");
     } catch (error) {
       console.error(error);
-      toast.error("Failed to delete challenge."); // <-- react-toastify
+      toast.error("Failed to delete challenge.");
     }
   };
 
-  const newpage = () => {
-    navigate("/admin/newchallenge");
-  };
+  const newpage = () => navigate("/admin/newchallenge");
 
   return (
     <div
@@ -178,9 +187,8 @@ const Admin = () => {
           "linear-gradient(180deg, #8fc6bb 0%, #f9b75a 50%, #f7a72b 100%)",
       }}
     >
-      <ToastContainer position="top-right" autoClose={3000} /> {/* <-- Toast container */}
+      <ToastContainer position="top-right" autoClose={3000} />
       <div className="bg-[#fce9b8] border-4 border-[#7f4f0a] p-6 rounded-3xl shadow-[6px_6px_0_0_#7f4f0a] space-y-6 w-full max-w-4xl">
-        {/* Header */}
         <div className="flex justify-between items-center mb-3">
           <h1 className="text-3xl font-bold text-[#7a4f0a] drop-shadow-sm">
             Manage Coding Problems
@@ -193,7 +201,6 @@ const Admin = () => {
           </button>
         </div>
 
-        {/* Accordion */}
         <div className="space-y-5">
           {localData.map((problem) => {
             const isOpen = openId === problem._id;
@@ -204,22 +211,19 @@ const Admin = () => {
                 key={problem._id}
                 className="bg-[#fff4d6] p-4 rounded-2xl border-4 border-[#7f4f0a]"
               >
-                {/* Accordion Header */}
                 <button
                   onClick={() => toggleAccordion(problem._id)}
                   className="button1 w-full flex justify-between items-center text-2xl text-[#7a4f0a] accordion-btn"
                 >
                   <span>{problem.function_name}</span>
                   <span
-                    className={`arrow text-3xl text-[#7a4f0a] transition-transform duration-300 ${
-                      isOpen ? "rotate-90" : ""
-                    }`}
+                    className={`arrow text-3xl text-[#7a4f0a] transition-transform duration-300 ${isOpen ? "rotate-90" : ""
+                      }`}
                   >
                     ➤
                   </span>
                 </button>
 
-                {/* Accordion Content */}
                 <div
                   className="accordion-content overflow-auto transition-all duration-300 ease-in-out"
                   style={{
@@ -229,7 +233,6 @@ const Admin = () => {
                 >
                   {isOpen && (
                     <div className="pt-4 space-y-3 text-xl text-[#7a4f0a]">
-                      {/* Problem */}
                       <p>
                         <strong>Problem:</strong>{" "}
                         {isEditing ? (
@@ -245,7 +248,6 @@ const Admin = () => {
                         )}
                       </p>
 
-                      {/* Difficulty */}
                       <p>
                         <strong>Difficulty:</strong>{" "}
                         {isEditing ? (
@@ -264,7 +266,6 @@ const Admin = () => {
                         )}
                       </p>
 
-                      {/* Testcases */}
                       <div>
                         <strong>Testcases:</strong>
                         {problem.testcases && problem.testcases.length > 0 ? (
@@ -277,7 +278,7 @@ const Admin = () => {
                                 <strong>Case:</strong>{" "}
                                 {isEditing ? (
                                   <input
-                                    value={tc.case.join(",")}
+                                    value={tc.caseStr ?? tc.case.join(",")}
                                     onChange={(e) =>
                                       handleTestcaseChange(
                                         problem._id,
@@ -318,7 +319,6 @@ const Admin = () => {
                         )}
                       </div>
 
-                      {/* Buttons */}
                       <div className="flex space-x-3 pt-2">
                         {isEditing ? (
                           <button

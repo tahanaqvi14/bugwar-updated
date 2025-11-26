@@ -37,7 +37,7 @@ const Secondpag = ({ onClose, userData }) => {
 
 
     const handleOtpChange = (index, value) => {
-        if (value && !/^\d$/.test(value)) return toast.error("Only digits (0-9) are allowed"); 
+        if (value && !/^\d$/.test(value)) return toast.error("Only digits (0-9) are allowed");
 
         const newOtp = [...otp];
         newOtp[index] = value;
@@ -72,23 +72,23 @@ const Secondpag = ({ onClose, userData }) => {
         // showLoader();
         const otpValue = otp.join('');
 
-        
+
         try {
             if (otpValue.length !== 6) return toast.error('Wrong Otp');
             setLoading(true);
             console.log(userData)
             if (otpValue === userData.message) {
                 const { data } = await create_User({
-                    variables: { 
-                      input: { 
-                        displayname: userData.displayname, 
-                        username: userData.username, 
-                        password: userData.password,
-                        email:userData.email,
-                      } 
+                    variables: {
+                        input: {
+                            displayname: userData.displayname,
+                            username: userData.username,
+                            password: userData.password,
+                            email: userData.email,
+                        }
                     }
-                  });
-                  
+                });
+
 
 
                 if (data?.user_creation?.success === false) {
@@ -96,9 +96,13 @@ const Secondpag = ({ onClose, userData }) => {
                 } else {
                     toast.success("Account Created");
                     setTimeout(() => {
-                        navigate("/")
+                        navigate("/");
 
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 50);
                     }, 1000);
+
                 }
             } else {
                 toast.error("Wrong OTP");

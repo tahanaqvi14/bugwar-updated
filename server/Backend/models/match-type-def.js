@@ -38,7 +38,6 @@ const match_typeDefs = gql`
     type Query{
         Get_matchinfo(matchId: String!): Match
         Get_allmatch(username: String!): [Match]
-
     }
 `
 

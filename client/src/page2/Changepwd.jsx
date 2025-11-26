@@ -150,10 +150,11 @@ const Changepwd = ({ onClose, userData }) => {
 
             if (data?.changepwdd?.success) {
                 toast.success("Password changed successfully");
+                onClose();
+
 
                 // 🔥 Reload after 1 second so the toast shows before refresh
                 setTimeout(() => {
-                    window.location.reload();
                 }, 1200);
 
             } else {
