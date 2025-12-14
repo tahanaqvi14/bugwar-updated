@@ -57,6 +57,7 @@ const resolvers = {
             return result;
 
         },
+
         send_email: async (parent, args, context) => {
             const UserModel = getUserModel("Users");
             const { email, username } = args;
@@ -239,7 +240,7 @@ const resolvers = {
                     sessiontoken: false,
                 },
                 { new: true }
-            );
+            );m
             return updatedUser;
         },
 

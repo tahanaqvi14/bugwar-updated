@@ -105,15 +105,15 @@ const Admin = () => {
     );
   };
 
-  const handleAddTestcase = (problemId) => {
-    setLocalData((prev) =>
-      prev.map((p) => {
-        if (p._id !== problemId) return p;
-        const newTestcases = [...p.testcases, { case: [], expected: "" }];
-        return { ...p, testcases: newTestcases };
-      })
-    );
-  };
+  // const handleAddTestcase = (problemId) => {
+  //   setLocalData((prev) =>
+  //     prev.map((p) => {
+  //       if (p._id !== problemId) return p;
+  //       const newTestcases = [...p.testcases, { case: [], expected: "" }];
+  //       return { ...p, testcases: newTestcases };
+  //     })
+  //   );
+  // };
 
   const handleSave = async (problem) => {
     try {

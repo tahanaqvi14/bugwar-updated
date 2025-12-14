@@ -79,7 +79,7 @@ const Singup = () => {
 
 
       const { data } = await sendEmail({ variables: { email, username } })
-      console.log(data);
+      // console.log(data);
       if (!data.send_email.success) {
         return toast.error(data.send_email.message);
       }

@@ -76,7 +76,7 @@ const Loginn = () => {
         const password = passwordRef.current.value;
         showLoader();
         const a = await login_User({ variables: { input: { username: username, password: password } } });
-        console.log(a);
+        // console.log(a);
         if (a.data.admin_login.success == false) {
             toast.error(a.data.admin_login.message, {
                 position: "top-center",

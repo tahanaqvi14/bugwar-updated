@@ -122,7 +122,7 @@ const data = [
         problem_statement: `Given an array of integers and an integer k, return the number of pairs (i, j) where i < j 
     and the absolute difference between arr[i] and arr[j] is exactly k. Tests counting and hashing skills.`,
         testcases: [
-          { case: [1, 5, 3, 4, 2], expected: 3 }, // pairs: (1,2),(5,4),(3,4)
+          { case: [1, 5, 3, 4, 2], expected: 3 },
           { case: [1, 2, 2, 3], expected: 2 }
         ]
       },
