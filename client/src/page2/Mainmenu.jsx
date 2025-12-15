@@ -31,7 +31,7 @@ const Mainmenu = () => {
     if (!data) {
       const timer = setTimeout(() => {
         refetch();
-      }, 300); // 300ms delay
+      }, 1000); // 300ms delay
       return () => clearTimeout(timer);
     }
   }, [data, refetch]);
