@@ -26,7 +26,7 @@ export const SocketContext = createContext();
 
 const client = new ApolloClient({
   cache: new InMemoryCache(),
-  uri: 'http://localhost:1509/graphql',
+  uri: 'https://bugwarbackend.onrender.com/graphql',
   credentials: 'include',
 });
 
@@ -34,13 +34,12 @@ const client = new ApolloClient({
 
 const App = () => {
   const [socket, setSocket] = useState(null);
-
   const connectSocket = () => {
     if (!socket) {
-      const newSocket = io('http://localhost:1509', { withCredentials: true });
+      const newSocket = io('https://bugwarbackend.onrender.com', { withCredentials: true });
       setSocket(newSocket);
     }
-  };
+  }
 
   // If you want, you can also manage user state here or in Apollo cache
 
