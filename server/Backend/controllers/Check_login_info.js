@@ -10,7 +10,9 @@ export async function Check_login_info(fetchedinfo, context, is_this_a_user) {
                 let token = generateToken(is_this_a_user);
                 // Use cross-site friendly cookie settings in production so hosted
                 // frontend can send the token back.
-                const isProd = process.env.NODE_ENV === 'production';
+                const origin = context.req?.headers?.origin || '';
+                const isLocal = origin.includes('localhost') || origin.includes('127.0.0.1');
+                const isProd = process.env.NODE_ENV === 'production' || !isLocal;
                 context.res.cookie("token", token, {
                     httpOnly: true,
                     secure: isProd,           // required for SameSite=None

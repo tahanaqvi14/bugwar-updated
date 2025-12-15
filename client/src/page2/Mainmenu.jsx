@@ -1,6 +1,4 @@
-// if (loading) return <p>Loading...</p>;
-// if (error) return <p>Error: {error.message}</p>;
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import "./Mainmenu.css";
 import { useQuery, gql } from '@apollo/client';
 import profile from "./images/profile.svg";
@@ -9,8 +7,7 @@ import trophy from "./images/trophy.svg";
 import { useNavigate } from 'react-router-dom';
 import Secondpage from "./Secondpage";
 
-//arif ka module ha yeh
-
+// GraphQL query for display name
 const DISPLAY_NAME_QUERY = gql`
   query MainMenu {
     Main_menu {
@@ -23,9 +20,23 @@ const Mainmenu = () => {
   const navigate = useNavigate();
   const [showCard, setShowCard] = useState(false);
 
-  const { loading, error, data } = useQuery(DISPLAY_NAME_QUERY);
+  // Force network fetch to get latest session info
+  const { loading, error, data, refetch } = useQuery(DISPLAY_NAME_QUERY, {
+    fetchPolicy: 'network-only'
+  });
   const displayname = data?.Main_menu?.displayname;
 
+  // Retry fetching if data is not yet available (slow backend)
+  useEffect(() => {
+    if (!data) {
+      const timer = setTimeout(() => {
+        refetch();
+      }, 300); // 300ms delay
+      return () => clearTimeout(timer);
+    }
+  }, [data, refetch]);
+
+  // Redirect if not authenticated
   useEffect(() => {
     if (error?.message?.includes("Not authenticated")) {
       const timer = setTimeout(() => navigate("/"), 2000);
@@ -36,7 +47,7 @@ const Mainmenu = () => {
   if (loading)
     return (
       <p className="text-center mt-10 text-lg">Loading Main Menu...</p>
-    )
+    );
 
   if (error) {
     if (error.message.includes("Not authenticated")) {
@@ -58,14 +69,13 @@ const Mainmenu = () => {
     );
   }
 
-
-
   return (
     <div className="welcome-page">
       <h1>Welcome, {displayname || 'Guest'}!</h1>
       <p className="subtitle">Choose your next challenge and climb the ranks</p>
 
       <div className="card-container">
+        {/* User Profile Card */}
         <div className="big_card">
           <div className="container">
             <div className="header">
@@ -84,6 +94,7 @@ const Mainmenu = () => {
           </div>
         </div>
 
+        {/* Start Game Card */}
         <div className="big_card">
           <div className="container">
             <div className="header">
@@ -102,6 +113,7 @@ const Mainmenu = () => {
           </div>
         </div>
 
+        {/* Leaderboard Card */}
         <div className="big_card">
           <div className="container">
             <div className="header">
@@ -120,7 +132,8 @@ const Mainmenu = () => {
           </div>
         </div>
       </div>
-      {/* 💳 Show the card when button clicked */}
+
+      {/* Show Secondpage overlay */}
       {showCard && (
         <div
           style={{

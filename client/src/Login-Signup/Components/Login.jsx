@@ -72,7 +72,7 @@ const Login = ({ connectSocket }) => {
         draggable: true,
         theme: "colored",
       });
-      connectSocket();
+      await connectSocket();
       setTimeout(() => {
         navigate('/page2');
       }, 1000);

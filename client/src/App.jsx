@@ -34,15 +34,18 @@ const client = new ApolloClient({
 
 const App = () => {
   const [socket, setSocket] = useState(null);
-  const connectSocket = () => {
+  // const newSocket = io('http://localhost:1509', { withCredentials: true });
+  // setSocket(newSocket);
+  const connectSocket = async () => {
     if (!socket) {
-      const newSocket = io('https://bugwarbackend.onrender.com', { withCredentials: true });
+      const newSocket = io('https://bugwarbackend.onrender.com', { withCredentials: true, transports: ['websocket'] });
       setSocket(newSocket);
-      // const newSocket = io('http://localhost:1509', { withCredentials: true });
-      // setSocket(newSocket);
+  
+      // Wait until socket connects
+      await new Promise(resolve => newSocket.on('connect', resolve));
     }
   }
-
+  
   // If you want, you can also manage user state here or in Apollo cache
 
   return (

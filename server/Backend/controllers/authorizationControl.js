@@ -78,7 +78,9 @@ export async function loginUser(req, res) {
                     let token = generateToken(user);
                     // 👉 Creates a JWT (JSON Web Token) using the user's info
 
-                    const isProd = process.env.NODE_ENV === 'production';
+                    const origin = req.headers?.origin || '';
+                    const isLocal = origin.includes('localhost') || origin.includes('127.0.0.1');
+                    const isProd = process.env.NODE_ENV === 'production' || !isLocal;
                     res.cookie("token", token, {
                         httpOnly: true,
                         secure: isProd,
