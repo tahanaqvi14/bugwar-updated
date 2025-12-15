@@ -8,7 +8,6 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Secondpage from './page2/Secondpage';
 import Login from './Login-Signup/Components/Login';
 import Singup from './Login-Signup/Components/Singup';
-
 import CodeEditor from './page3/CodeEditor';
 import Mainmenu from './page2/Mainmenu'
 import Leaderboard from './page2/Leaderboard';
@@ -27,6 +26,7 @@ export const SocketContext = createContext();
 const client = new ApolloClient({
   cache: new InMemoryCache(),
   uri: 'https://bugwarbackend.onrender.com/graphql',
+  // uri: 'http://localhost:1509/graphql',
   credentials: 'include',
 });
 
@@ -38,6 +38,8 @@ const App = () => {
     if (!socket) {
       const newSocket = io('https://bugwarbackend.onrender.com', { withCredentials: true });
       setSocket(newSocket);
+      // const newSocket = io('http://localhost:1509', { withCredentials: true });
+      // setSocket(newSocket);
     }
   }
 

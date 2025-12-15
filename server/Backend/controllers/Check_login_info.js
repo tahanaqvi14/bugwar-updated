@@ -8,14 +8,13 @@ export async function Check_login_info(fetchedinfo, context, is_this_a_user) {
 
             try {
                 let token = generateToken(is_this_a_user);
+                // Use cross-site friendly cookie settings in production so hosted
+                // frontend can send the token back.
+                const isProd = process.env.NODE_ENV === 'production';
                 context.res.cookie("token", token, {
                     httpOnly: true,
-                    secure: process.env.NODE_ENV === 'development',
-                    // The cookie will only be sent if you're using a secure HTTPS connection (with the 🔒 lock in the browser
-                    // if secure value is false so Cookie will work on http:// too (like localhost)
-                    // if secure value is true so Cookie will only work on https:// (with the 🔒 lock in the browser) which means it will be used only on production server
-                    // in this case we have set NODE_ENV in .env file as production so this will be FALSE as we are using in development mode & when it is production ready so we will set it to TRUE.
-                    sameSite: "lax"
+                    secure: isProd,           // required for SameSite=None
+                    sameSite: isProd ? "none" : "lax"
                 });
 
                 context.req.session.user = {

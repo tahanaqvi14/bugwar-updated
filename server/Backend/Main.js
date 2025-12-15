@@ -48,6 +48,21 @@ connectDB();
 
 const httpServer = http.createServer(app);
 
+app.use(cors({
+  origin: 'https://competitivecodingarena.onrender.com',
+  // origin: 'http://localhost:5173',
+  credentials: true
+}));
+
+
+const io = new SocketIOServer(httpServer, {
+  cors: {
+    origin: 'https://competitivecodingarena.onrender.com',
+    // origin: 'http://localhost:5173',
+    credentials: true,
+  }
+});
+
 const sessionMiddleware =
   expressSession({
     secret: process.env.EXPRESS_SESSION_SECRET,
@@ -106,7 +121,7 @@ const sessionMiddleware =
 
 
 
-      sameSite: 'lax'  // Prevents CSRF attacks (use 'strict' for sensitive apps)
+      sameSite: "none",  // Prevents CSRF attacks (use 'strict' for sensitive apps)
       // I open a legit site, and it stores a cookie in the browser. Then I visit a bogus website where the hacker has written invisible code that triggers the browser to send a request to the legit site to perform some action. The browser checks the SameSite setting on the cookie and decides whether or not to include the cookie in the request. If SameSite=Strict, the request is still sent — but without the cookie, so the action fails.
 
       //There are 3 option in this: none,strict,lax
@@ -134,12 +149,7 @@ const sessionMiddleware =
 
 app.use(sessionMiddleware);
 
-const io = new SocketIOServer(httpServer, {
-  cors: {
-    origin: 'http://localhost:5173',
-    credentials: true,
-  }
-});
+
 
 // io.use(...)
 // This tells your Socket.IO server:
@@ -376,10 +386,6 @@ io.on('connection', (socket) => {
 
 });
 
-app.use(cors({
-  origin: 'http://localhost:5173',
-  credentials: true
-}));
 
 app.use(express.json());
 // It lets your server understand JSON in the request body.

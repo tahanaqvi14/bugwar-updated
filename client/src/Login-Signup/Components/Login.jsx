@@ -1,5 +1,5 @@
 import React, { useRef,useContext, useEffect, useState } from 'react';
-import './login.css'
+import './Login.css'
 import { useMutation, gql } from '@apollo/client'
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -62,7 +62,6 @@ const Login = ({ connectSocket }) => {
         draggable: true,
         theme: "colored",
       })
-
     }else{
       toast.success(a.data.user_login.message, {
         position: "top-center",
