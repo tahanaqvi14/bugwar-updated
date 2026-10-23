@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import "./Mainmenu.css";
 import { useQuery, gql } from '@apollo/client';
 import profile from "./images/profile.svg";
@@ -26,15 +26,18 @@ const Mainmenu = () => {
   });
   const displayname = data?.Main_menu?.displayname;
 
-  // Retry fetching if data is not yet available (slow backend)
+  // Retry a few times if the request failed for a reason other than login (e.g. the free Render server is waking up).
+  // Before, this retried every second forever, even when the user was simply not logged in.
+  const retries = useRef(0);
+  const isAuthError = error?.message?.includes("Not authenticated");
   useEffect(() => {
-    if (!data) {
-      const timer = setTimeout(() => {
-        refetch();
-      }, 1000); // 300ms delay
-      return () => clearTimeout(timer);
-    }
-  }, [data, refetch]);
+    if (data || loading || isAuthError || retries.current >= 5) return;
+    const timer = setTimeout(() => {
+      retries.current += 1;
+      refetch().catch(() => {});
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [data, loading, isAuthError, refetch]);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -44,7 +47,7 @@ const Mainmenu = () => {
     }
   }, [error, navigate]);
 
-  if (loading)
+  if (loading && !data)
     return (
       <p className="text-center mt-10 text-lg">Loading Main Menu...</p>
     );

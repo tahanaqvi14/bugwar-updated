@@ -1,9 +1,10 @@
 import React from "react";
 import { useQuery, gql } from '@apollo/client';
 
+// The server returns the matches of the logged-in user (newest first)
 const GET_ALL_MATCH = gql`
-  query GetAllMatches($username: String!) {
-    Get_allmatch(username: $username) {
+  query GetAllMatches {
+    Get_allmatch {
       matchId
       winner
       status
@@ -18,20 +19,17 @@ const GET_ALL_MATCH = gql`
   }
 `;
 
-const History = ({ username }) => {
+const History = () => {
+  // Always ask the server, so a match that just ended shows up straight away
   const { data: allmatchinfo, loading, error } = useQuery(GET_ALL_MATCH, {
-    variables: { username },
-    skip: !username
+    fetchPolicy: 'cache-and-network'
   });
 
   const crown = "👑";
   const drawIcon = "🤝";
 
-  // Format timestamp to readable date
-  const formatDate = (timestamp) => {
-    const date = new Date(Number(timestamp));
-    return date.toLocaleString();
-  };
+  // Format ISO date to readable date
+  const formatDate = (isoDate) => new Date(isoDate).toLocaleString();
 
   const matches = allmatchinfo?.Get_allmatch ?? [];
 
@@ -62,11 +60,11 @@ const History = ({ username }) => {
           </div>
 
           {/* Loading / Error */}
-          {loading && <p className="text-center text-lg">Loading matches...</p>}
+          {loading && !allmatchinfo && <p className="text-center text-lg">Loading matches...</p>}
           {error && <p className="text-center text-red-600">Failed to load matches.</p>}
 
           {/* Scrollable Table Slider / Empty State */}
-          {!loading && !error && (
+          {allmatchinfo && !error && (
             matches.length === 0 ? (
               <div className="w-full max-w-[800px] h-[400px] flex items-center justify-center mx-auto">
                 <p className="text-xl font-bold text-[#7f4f0a] text-center">
@@ -89,24 +87,21 @@ const History = ({ username }) => {
                     <tbody>
                       {matches.map((match) => {
                         const p1 = match.participants[0];
-                        const p2 = match.participants[1];
+                        const p2 = match.participants[1] ?? { displayname: '-', points: 0 };
 
-                        const isDraw = p1.points === p2.points;
-                        const p1Win = p1.points > p2.points;
-                        const p2Win = p2.points > p1.points;
+                        // winner is "N" for a draw, otherwise the winner's username (also for interrupted matches)
+                        const isDraw = match.status === "Completed" && match.winner === "N";
 
                         let p1Icon = "";
                         let p2Icon = "";
 
-                        if (match.status === "Completed") {
-                          if (isDraw) {
-                            p1Icon = drawIcon;
-                            p2Icon = drawIcon;
-                          } else if (p1Win) {
-                            p1Icon = crown;
-                          } else if (p2Win) {
-                            p2Icon = crown;
-                          }
+                        if (isDraw) {
+                          p1Icon = drawIcon;
+                          p2Icon = drawIcon;
+                        } else if (match.winner === p1.username) {
+                          p1Icon = crown;
+                        } else if (match.winner === p2.username) {
+                          p2Icon = crown;
                         }
 
                         return (
@@ -117,7 +112,7 @@ const History = ({ username }) => {
                             <td className="border border-[#7f4f0a] px-2 py-1">
                               {match.status === "Completed"
                                 ? (isDraw ? "Draw" : "Completed")
-                                : "Incomplete"}
+                                : match.status === "Interrupted" ? "Interrupted" : "In progress"}
                             </td>
                           </tr>
                         );

@@ -1,74 +1,39 @@
 import React, { useRef, useState } from 'react'
 import { useMutation, gql } from '@apollo/client'
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import { useNavigate } from 'react-router-dom';
+import { toast } from "react-toastify";
 
-
-
-export const CHANGE_PASSWORD_MUTATION = gql`
-  mutation changepwdd($username: String!, $pwd: String!) {
-    changepwdd(username: $username, pwd: $pwd) {
+const VERIFY_OTP_MUTATION = gql`
+  mutation VerifyResetOtp($otp: String!) {
+    verify_reset_otp(otp: $otp) {
       success
       message
     }
   }
 `;
 
-const Changepwd = ({ onClose, userData }) => {
-    const navigate = useNavigate();
+const CHANGE_PASSWORD_MUTATION = gql`
+  mutation changepwdd($otp: String!, $pwd: String!) {
+    changepwdd(otp: $otp, pwd: $pwd) {
+      success
+      message
+    }
+  }
+`;
+
+// Password reset for the logged-in user. The OTP was emailed by the Profile page (send_reset_otp);
+// the server checks it here, and again when the new password is saved.
+const Changepwd = ({ onClose }) => {
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
     const [loading, setLoading] = useState(false);
     const [isVerified, setIsVerified] = useState(false);
     const [inputValue, setInputValue] = useState('');
-    const inputRefs = useRef([]);
-    const btnRef = useRef(null);
     const [pwdloading, setpwdloading] = useState(false);
+    const inputRefs = useRef([]);
+    const [verifyOtp] = useMutation(VERIFY_OTP_MUTATION);
     const [update_pwd] = useMutation(CHANGE_PASSWORD_MUTATION);
-    const passwordRef = useRef();
-
-    function showLoader() {
-        btnRef.current.disabled = true;
-        const otpVerifierBtn = document.getElementById('otpverfier');
-        if (otpVerifierBtn) {
-            otpVerifierBtn.innerHTML = '<div id="loader"></div>';
-            otpVerifierBtn.classList.remove('button1');
-            otpVerifierBtn.disabled = true;
-            otpVerifierBtn.style.pointerEvents = 'none';
-            otpVerifierBtn.style.cursor = 'not-allowed';
-        }
-    }
-
-    function showTickMark() {
-        const otpVerifierBtn = document.getElementById('otpverfier');
-        if (otpVerifierBtn) {
-            otpVerifierBtn.innerHTML = '✓';
-            otpVerifierBtn.style.fontSize = '24px';
-            otpVerifierBtn.style.color = '#22c55e';
-            otpVerifierBtn.disabled = true;
-            otpVerifierBtn.style.pointerEvents = 'none';
-            otpVerifierBtn.style.cursor = 'not-allowed';
-            setIsVerified(true);
-        }
-    }
-
-    function hideLoader() {
-        btnRef.current.disabled = false;
-        setIsVerified(false);
-        const otpVerifierBtn = document.getElementById('otpverfier');
-        if (otpVerifierBtn) {
-            otpVerifierBtn.innerHTML = 'Verify';
-            otpVerifierBtn.classList.add('button1');
-            otpVerifierBtn.disabled = false;
-            otpVerifierBtn.style.pointerEvents = 'auto';
-            otpVerifierBtn.style.cursor = 'pointer';
-            otpVerifierBtn.style.fontSize = '14px';
-            otpVerifierBtn.style.color = '#5a3a1a';
-        }
-    }
-
 
     const handleOtpChange = (index, value) => {
+        if (isVerified) return;
         if (value && !/^\d$/.test(value)) return;
 
         const newOtp = [...otp];
@@ -88,6 +53,7 @@ const Changepwd = ({ onClose, userData }) => {
 
     const handlePaste = (e) => {
         e.preventDefault();
+        if (isVerified) return;
         const pastedData = e.clipboardData.getData('text').trim().slice(0, 6);
 
         if (/^\d+$/.test(pastedData)) {
@@ -107,67 +73,54 @@ const Changepwd = ({ onClose, userData }) => {
             return toast.error("Please enter the 6-digit OTP");
         }
 
-        showLoader(); // only show loader if OTP length is 6
         setLoading(true);
-
         try {
-            if (otpValue === userData.message) {
-                showTickMark(); // tick mark stays
+            const { data } = await verifyOtp({ variables: { otp: otpValue } });
+            if (data.verify_reset_otp.success) {
+                setIsVerified(true);
                 toast.success("OTP Verified Successfully");
             } else {
-                toast.error("Wrong OTP | Try Again");
-                hideLoader(); // reset button only if wrong OTP
+                toast.error(`${data.verify_reset_otp.message} | Try Again`);
             }
         } catch (err) {
             toast.error(err?.message || "Something went wrong");
-            hideLoader();
         } finally {
-            setLoading(false); // stop the React loading state
+            setLoading(false);
         }
     };
 
-    const verifypwd = async (e) => {
+    const verifypwd = async () => {
+        const password = inputValue;
+
+        // Password validation (the server checks the same rules)
+        if (!password) return toast.error("Password is required");
+        if (password.length < 8) return toast.error("Password must be at least 8 characters");
+        if (password.length > 20) return toast.error("Password must be at most 20 characters");
+
         setpwdloading(true);
-        passwordRef.current.disabled = true;
-
-        let password = inputValue;
-        console.log(password);
-
         try {
-            // Password validation
-            if (!password) return toast.error("Password is required");
-            if (password.length < 8) return toast.error("Password must be at least 8 characters");
-            if (password.length > 20) return toast.error("Password must be at most 20 characters");
-
             const { data } = await update_pwd({
                 variables: {
-                    username: userData?.username || '',
+                    otp: otp.join(''),
                     pwd: password
                 }
             });
 
-            console.log(data);
-
             if (data?.changepwdd?.success) {
                 toast.success("Password changed successfully");
                 onClose();
-
-
-                // 🔥 Reload after 1 second so the toast shows before refresh
-                setTimeout(() => {
-                }, 1200);
-
             } else {
-                toast.error("Failed to change password");
+                toast.error(data?.changepwdd?.message || "Failed to change password");
             }
-
         } catch (error) {
             toast.error(error?.message || "Something went wrong");
         } finally {
             setpwdloading(false);
-            passwordRef.current.disabled = false;
         }
     };
+
+    const otpComplete = otp.join('').length === 6;
+
     return (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
             <div
@@ -202,7 +155,6 @@ const Changepwd = ({ onClose, userData }) => {
                     ✕
                 </button>
 
-                {/* ORIGINAL TEXT KEPT */}
                 <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '10px' }}>
                     Verify Your Email
                 </h2>
@@ -221,6 +173,7 @@ const Changepwd = ({ onClose, userData }) => {
                                 inputMode="numeric"
                                 maxLength={1}
                                 value={digit}
+                                disabled={isVerified}
                                 onChange={(e) => handleOtpChange(index, e.target.value)}
                                 onKeyDown={(e) => handleKeyDown(index, e)}
                                 onPaste={handlePaste}
@@ -236,41 +189,27 @@ const Changepwd = ({ onClose, userData }) => {
                             />
                         ))}
                         <button
-                            ref={btnRef}
-                            type="button"
-                            onClick={handleVerifyOTP}
+                            type="submit"
                             id='otpverfier'
-                            disabled={loading}
+                            disabled={loading || isVerified}
                             style={{
                                 padding: '8px 16px',
-                                fontSize: '14px',
+                                fontSize: isVerified ? '24px' : '14px',
                                 fontWeight: 'bold',
-                                backgroundColor: otp.join('').length === 6 ? '#f4b24a' : '#d4a574',
-                                color: '#5a3a1a',
+                                backgroundColor: otpComplete ? '#f4b24a' : '#d4a574',
+                                color: isVerified ? '#22c55e' : '#5a3a1a',
                                 border: '2px solid #7f4f0a',
                                 borderRadius: '8px',
-                                cursor: loading ? 'not-allowed' : 'pointer',
+                                cursor: loading || isVerified ? 'not-allowed' : 'pointer',
                                 opacity: loading ? 0.6 : 1,
                                 height: '55px',
                                 whiteSpace: 'nowrap',
-
-                            }}
-                            onMouseEnter={(e) => {
-                                if (e.target.disabled || e.target.style.pointerEvents === 'none') {
-                                    e.target.style.backgroundColor = e.target.style.backgroundColor;
-                                }
-                            }}
-                            onMouseLeave={(e) => {
-                                if (e.target.disabled || e.target.style.pointerEvents === 'none') {
-                                    e.target.style.backgroundColor = e.target.style.backgroundColor;
-                                }
                             }}
                         >
-                            {loading ? "..." : "Verify"}
+                            {isVerified ? '✓' : loading ? "..." : "Verify"}
                         </button>
                     </div>
 
-                    {/* ORIGINAL TEXT KEPT */}
                     <p style={{
                         fontSize: '14px',
                         marginBottom: '20px',
@@ -281,14 +220,14 @@ const Changepwd = ({ onClose, userData }) => {
                 </form>
 
 
-                <form>
+                <form onSubmit={(e) => { e.preventDefault(); verifypwd(); }}>
                     <input
                         type="password"
                         value={inputValue}
-                        ref={passwordRef}
                         onChange={(e) => setInputValue(e.target.value)}
-                        disabled={!isVerified}
+                        disabled={!isVerified || pwdloading}
                         placeholder='Enter new password'
+                        autoComplete="new-password"
                         style={{
                             width: '100%',
                             padding: '12px 16px',
@@ -303,8 +242,7 @@ const Changepwd = ({ onClose, userData }) => {
                         }}
                     />
                     <button
-                        type="button"
-                        onClick={verifypwd}
+                        type="submit"
                         disabled={!isVerified || pwdloading}
                         style={{
                             width: '100%',
@@ -319,8 +257,6 @@ const Changepwd = ({ onClose, userData }) => {
                     >
                         {pwdloading ? "Changing Password..." : "Change Password"}
                     </button>
-
-
                 </form>
 
             </div>

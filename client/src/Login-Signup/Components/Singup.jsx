@@ -1,7 +1,6 @@
 import React, { useRef, useState } from 'react';
 import './Signup.css';
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import { useNavigate } from 'react-router-dom';
 import Secondpag from "./Secondpag";
 import { useMutation, gql } from '@apollo/client'
@@ -22,7 +21,6 @@ const input_text3 = ['E', 'm', 'a', 'i', 'l'];
 const input_text4 = ['P', 'a', 's', 's', 'w', 'o', 'r', 'd'];
 
 const Singup = () => {
-  const btnRef = useRef();
   const navigate = useNavigate();
   const [showOTPPage, setShowOTPPage] = useState(false)
   const [userData, setUserData] = useState({});
@@ -35,22 +33,8 @@ const Singup = () => {
 
   let displayname, username, password, email;
 
-  function showLoader() {
-    btnRef.current.disabled = true;
-    document.getElementById('submit-button').innerHTML = '<div id="loader"></div>';
-    document.getElementById('submit-button').classList.remove('button1');
-
-  }
-  function hideLoader() {
-    btnRef.current.disabled = false;
-    document.getElementById('submit-button').innerHTML = 'Create Account';
-    document.getElementById('submit-button').classList.add('button1');
-  }
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    showLoader();
-
 
     try {
       displayname = displayRef.current.value.trim();
@@ -83,12 +67,12 @@ const Singup = () => {
       if (!data.send_email.success) {
         return toast.error(data.send_email.message);
       }
-      setUserData({ displayname, username, email, password, message: data.send_email.message });
+      // The OTP is only in the email. The server checks it when the account is created.
+      toast.success(data.send_email.message);
+      setUserData({ displayname, username, email, password });
       setShowOTPPage(true);
-    } catch (error) {
-      return toast.error(`${error}`);
-    }finally{
-      hideLoader();
+    } catch {
+      return toast.error("Could not reach the server, please try again");
     }
   }
 
@@ -98,15 +82,6 @@ const Singup = () => {
 
   return (
     <div className="flex justify-center items-center h-screen">
-      <ToastContainer
-        position="top-center"
-        autoClose={3000}
-        hideProgressBar
-        closeOnClick
-        pauseOnHover
-        draggable
-        theme="colored"
-      />
       <div
         className="rounded-3xl bg-[#fce9b8] border-4 border-[#7f4f0a] shadow-[6px_6px_0_0_#7f4f0a] w-full max-w-md p-6 flex flex-col gap-4 text-[#5a3a1a]">
         <div className="flex justify-between">
@@ -163,10 +138,9 @@ const Singup = () => {
           </div>
 
           <button
-            ref={btnRef}
-            className="button1 font-fredoka text-2xl text-[#6b4a1e] bg-[#f4b24a] rounded-xl w-full py-3 mb-6 select-none"
-            type="submit" id='submit-button' >
-            Create Account
+            className={`${loading ? '' : 'button1 '}font-fredoka text-2xl text-[#6b4a1e] bg-[#f4b24a] rounded-xl w-full py-3 mb-6 select-none`}
+            type="submit" id='submit-button' disabled={loading}>
+            {loading ? <div id="loader"></div> : 'Create Account'}
           </button>
         </form>
       </div>

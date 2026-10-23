@@ -8,6 +8,8 @@ const challenge_typeDefs = gql`
         _id: ID!
         testcases: [testcase]
         difficulty:String
+        # numbers | array | array_and_k (how test case numbers are passed to the function)
+        input_type:String
     }
 
     type testcase {
@@ -15,7 +17,7 @@ const challenge_typeDefs = gql`
         expected: Int!
     }
 
-        
+
     input checking_code{
         code:String!
         challengeid:ID!
@@ -24,8 +26,10 @@ const challenge_typeDefs = gql`
     type TestCaseResult {
         case: [Int!]!
         expected: Int!
-        output: Int
+        # What the player's function returned, as JSON text (null when it returned nothing)
+        output: String
         passed:Boolean!
+        error: String
     }
 
     type TestCase {
@@ -49,12 +53,13 @@ const challenge_typeDefs = gql`
         _id: ID
         function_name: String!
         problem_statement: String!
-        testcases: [TestCaseInput]
-        difficulty: String
+        testcases: [TestCaseInput!]!
+        difficulty: String!
+        input_type: String
     }
 
     type Query{
-        Get_challenge(idnum:ID,username:String):challenge
+        Get_challenge(idnum:ID):challenge
         checking_user_code(input:checking_code!):CodeResponse!
         Get_challengeall:[challenge]
         check:Boolean
@@ -62,8 +67,8 @@ const challenge_typeDefs = gql`
 
     type Mutation {
         deleteChallenge(id_number: ID!): Boolean!
-        updateChallenge(input: ChallengeInput):challenge
-        createChallenge(input: ChallengeInput):Boolean!
+        updateChallenge(input: ChallengeInput!):challenge
+        createChallenge(input: ChallengeInput!):Boolean!
     }
 `
 

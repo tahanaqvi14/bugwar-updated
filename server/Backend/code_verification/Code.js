@@ -1,123 +1,92 @@
-import { NodeVM } from 'vm2';
-import vm from 'vm';
+import { fork } from 'child_process';
+import { fileURLToPath } from 'url';
 
-const Code = async (userCode, challengeinfo) => {
+// Sends players' code to judge-worker.js, which runs in a separate process.
+// Even if a submission is evil (infinite loop, huge memory use) the game server keeps running:
+// the worker enforces time and memory limits, and if it ever hangs or crashes it is killed and restarted.
 
-    // Step 1: Pre-validate syntax with vm  class
-    try {
-        new vm.Script(userCode);
-    } catch (syntaxError) {
-        console.log('Syntax error caught:', syntaxError);
-        return {
-            success: false,
-            message: {
-                message: `Syntax Error: ${syntaxError.message}`,
-            },
-        };
-    }
+const WORKER_PATH = fileURLToPath(new URL('./judge-worker.js', import.meta.url));
+const JOB_TIMEOUT_MS = 15000; // safety net on top of the worker's own per-test time limit
+const MAX_CONCURRENT_JOBS = 4;
 
+let worker = null;
+let nextJobId = 1;
+let activeJobs = 0;
+const pending = new Map(); // job id -> { resolve, timer, child }
+const waiting = []; // jobs waiting for a free slot
 
-    const vmInstance = new NodeVM({
-        console: 'redirect',
-        timeout: 2000,
-        sandbox: {},
-        require: {
-            external: false,
-            builtin: [],
-        },
+function failure(message) {
+    return { success: false, message: { message } };
+}
+
+function startWorker() {
+    // isolated-vm needs --no-node-snapshot on Node 20+
+    const child = fork(WORKER_PATH, [], {
+        execArgv: ['--no-node-snapshot'],
+        stdio: ['ignore', 'inherit', 'inherit', 'ipc'],
     });
 
-    let logs = [];
-    vmInstance.on('console.log', (msg) => logs.push(msg));
+    child.on('message', ({ id, result }) => {
+        const job = pending.get(id);
+        if (!job) return;
+        pending.delete(id);
+        clearTimeout(job.timer);
+        job.resolve(result);
+    });
 
-    let results = [];
-    let overallPassed = true;
-
-
-    try {
-        // Ensure the user code exports the function
-        const userFunction = vmInstance.run(`
-            ${userCode}
-            module.exports = ${challengeinfo.function_name};
-        `);
-
-        // Execute test cases
-        // const results = testCases.map((tc) => {
-        //     const output = userFunction(...tc.input);
-        //     return {
-        //         input: tc.input,
-        //         expected: tc.expected,
-        //         output,
-        //         passed: output === tc.expected,
-        //     };
-        // });
-
-        // Execute test cases
-        
-        for (const tc of challengeinfo.testcases) {
-            let output, passed, error = null;
-            output = userFunction(...tc.case);
-            if (output === tc.expected) {
-                passed = true;
-            } else {
-                passed = false;
-                output = null;
-                passed = false;
-            }
-            results.push({
-                case: tc.case,
-                expected: tc.expected,
-                output: output === undefined ? null : output,
-                passed,
-                error,
-            });
+    child.on('exit', () => {
+        if (worker === child) worker = null;
+        for (const [id, job] of pending) {
+            if (job.child !== child) continue;
+            pending.delete(id);
+            clearTimeout(job.timer);
+            job.resolve(failure(job.timedOut
+                ? 'Time limit exceeded. Check for infinite loops.'
+                : 'The code runner restarted, please run your code again'));
         }
+    });
 
+    child.on('error', (error) => console.error('Code runner process error:', error));
+    return child;
+}
 
+function runJob(payload) {
+    return new Promise((resolve) => {
+        if (!worker) worker = startWorker();
+        const child = worker;
+        const id = nextJobId++;
 
-        let pass = 0;
-        for (let element of results) {
-            if (element.passed == true) {
-                pass += 1;
-            }
-        }
-        if (pass == 2) {
-            return {
-                success: true,
-                message: {
-                    input: results[0].case,
-                    expected: results[0].expected,
-                    output: results[0].output,
-                    passed: true,
-                    results,
-                    // message: "Output did match expected",
-                    ...(logs.length > 0 && { consolelogs: logs.map(item => item) })
-                }
-            }
+        const job = { resolve, child, timedOut: false };
+        job.timer = setTimeout(() => {
+            job.timedOut = true;
+            child.kill('SIGKILL'); // the exit handler answers every job of this worker
+        }, JOB_TIMEOUT_MS);
+        pending.set(id, job);
 
-        } else {
-            return {
-                success: true,
-                message: {
-                    results,
-                    input: results[0].case,
-                    expected: results[0].expected,
-                    output: results[0].output,
-                    passed: false,
-                    // message: "Output did not match expected",
-                    ...(logs.length > 0 && { consolelogs: logs.map(item => item) })
-                }
-            };
-        }
-    } catch (error) {
-        // Handle runtime errors, reference errors, etc.
-        return {
-            success: false,
-            message: {
-                message: `Runtime Error: ${error.message}`
-            },
-        };
+        child.send({ id, ...payload });
+    });
+}
+
+async function withSlot(task) {
+    if (activeJobs >= MAX_CONCURRENT_JOBS) {
+        await new Promise((resolve) => waiting.push(resolve));
     }
+    activeJobs++;
+    try {
+        return await task();
+    } finally {
+        activeJobs--;
+        waiting.shift()?.();
+    }
+}
+
+const Code = async (userCode, challengeinfo) => {
+    return withSlot(() => runJob({
+        code: userCode,
+        functionName: challengeinfo.function_name,
+        inputType: challengeinfo.input_type ?? 'numbers',
+        testcases: (challengeinfo.testcases ?? []).map((tc) => ({ case: [...tc.case], expected: tc.expected })),
+    }));
 };
 
 export default Code;

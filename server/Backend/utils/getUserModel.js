@@ -4,18 +4,24 @@ import mongoose from 'mongoose'
 import userSchema from '../models/user.js';
 import challengeSchema from '../models/challenge.js';
 import matchSchema from '../models/match.js';
+import otpSchema from '../models/otp.js';
 
 
 const schemaMap = {
   Users: userSchema,
   Challenges: challengeSchema,
-  Matches:matchSchema
+  Matches: matchSchema,
+  Otps: otpSchema
 };
 
 // This object remembers created models (to avoid errors or duplicate models)
 const modelCache = {};
 
 export function getUserModel(collectionName) {
+  if (!schemaMap[collectionName]) {
+    throw new Error(`Unknown collection ${collectionName}`);
+  }
+
   const usersDB = mongoose.connection.useDb('Game');  // Use the right DB
 
   // If model for this collection doesn't exist yet, create it

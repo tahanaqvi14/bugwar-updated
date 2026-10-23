@@ -1,21 +1,6 @@
-import bcrypt from 'bcrypt';
-
-export default async function isadminloggedin(req) {
-  try {
-    const authCookie = req.cookies?.auth;
-
-    // No cookie found
-    if (!authCookie) {
-      return false;
-    }
-
-    // Compare cookie hash with hardcoded admin credentials
-    const isValid = await bcrypt.compare('admin:admin', authCookie);
-
-    return isValid; // true if valid, false if invalid
-
-  } catch (error) {
-    console.error("Admin auth check error:", error);
-    return false;
-  }
+// The admin flag lives in the server-side session (set by admin_login), so the browser cannot fake it.
+// The old version trusted a cookie containing bcrypt("admin:admin"), which anyone could create themselves.
+export default function isadminloggedin(req) {
+  const adminUntil = req.session?.adminUntil;
+  return typeof adminUntil === 'number' && adminUntil > Date.now();
 }

@@ -1,9 +1,7 @@
 import React, { useRef, useState } from 'react'
 import { useMutation, gql } from '@apollo/client'
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import { useNavigate } from 'react-router-dom';
-// import { useStore } from '../../../store/Store';
 
 
 const CREATE_USER_MUTATION = gql`
@@ -20,20 +18,7 @@ const Secondpag = ({ onClose, userData }) => {
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
     const [loading, setLoading] = useState(false);
     const inputRefs = useRef([]);
-    const btnRef = useRef(null);
     const [create_User] = useMutation(CREATE_USER_MUTATION);
-
-    // function showLoader() {
-    //     btnRef.current.disabled = true;
-    //     document.getElementById('submit-button').innerHTML = '<div id="loader"></div>';
-    //     document.getElementById('submit-button').classList.remove('button1');
-    // }
-
-    // function hideLoader() {
-    //     btnRef.current.disabled = false;
-    //     document.getElementById('submit-button').innerHTML = 'Create Account';
-    //     document.getElementById('submit-button').classList.add('button1');
-    // }
 
 
     const handleOtpChange = (index, value) => {
@@ -69,49 +54,35 @@ const Secondpag = ({ onClose, userData }) => {
 
     const handleVerifyOTP = async (e) => {
         e.preventDefault();
-        // showLoader();
         const otpValue = otp.join('');
-
 
         try {
             if (otpValue.length !== 6) return toast.error('Wrong Otp');
             setLoading(true);
-            console.log(userData)
-            if (otpValue === userData.message) {
-                const { data } = await create_User({
-                    variables: {
-                        input: {
-                            displayname: userData.displayname,
-                            username: userData.username,
-                            password: userData.password,
-                            email: userData.email,
-                        }
+            // The server checks the OTP and creates the account in one step
+            const { data } = await create_User({
+                variables: {
+                    input: {
+                        displayname: userData.displayname,
+                        username: userData.username,
+                        password: userData.password,
+                        email: userData.email,
+                        otp: otpValue,
                     }
-                });
-
-
-
-                if (data?.user_creation?.success === false) {
-                    toast.error(data.user_creation.message);
-                } else {
-                    toast.success("Account Created");
-                    setTimeout(() => {
-                        navigate("/");
-
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 50);
-                    }, 1000);
-
                 }
+            });
+
+            if (!data?.user_creation?.success) {
+                toast.error(data?.user_creation?.message || "Something went wrong");
             } else {
-                toast.error("Wrong OTP");
+                toast.success("Account Created, you can log in now");
+                onClose();
+                navigate("/");
             }
         } catch (err) {
             toast.error(err?.message || "Something went wrong");
         } finally {
             setLoading(false);
-            // hideLoader();
         }
     }
     return (
@@ -193,7 +164,6 @@ const Secondpag = ({ onClose, userData }) => {
                     </p>
 
                     <button
-                        ref={btnRef}
                         type="submit"
                         disabled={otp.join('').length !== 6 || loading}
                         style={{

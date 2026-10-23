@@ -1,8 +1,8 @@
-import React, { useRef, useContext, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useQuery, gql, useMutation } from "@apollo/client";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import { useNavigate } from 'react-router-dom';
+import { TOAST_OPTIONS } from '../config';
 
 
 const input_text1 = ['U', 's', 'e', 'r', 'n', 'a', 'm', 'e'];
@@ -27,8 +27,8 @@ const Loginn = () => {
 
     const navigate = useNavigate();
 
-    const btnRef = useRef();
-    const [authError, setAuthError] = useState(true);
+    const [alreadyLoggedIn, setAlreadyLoggedIn] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
     const [login_User] = useMutation(LOGIN_ADMIN_MUTATION);
     const usernameRef = useRef();
     const passwordRef = useRef();
@@ -38,71 +38,39 @@ const Loginn = () => {
     });
 
     useEffect(() => {
-        if (!loading) {
-            if (data && data.check === true) {
-                setAuthError(false);
-                setTimeout(() => navigate("/admin/adminpage"), 1000);
-            }
+        if (!loading && data?.check === true) {
+            setAlreadyLoggedIn(true);
+            const timer = setTimeout(() => navigate("/admin/adminpage"), 1000);
+            return () => clearTimeout(timer);
         }
     }, [data, loading, navigate]);
 
-    if (!authError)
+    if (alreadyLoggedIn)
         return (
-          <>
-            <ToastContainer />
             <div className="min-h-screen flex justify-center items-center text-2xl text-red-500 font-bold">
-            You are already logined in!
+                You are already logged in!
             </div>
-          </>
         );
-
-    function showLoader() {
-        btnRef.current.disabled = true;
-        document.getElementById('submit-button').innerHTML = '<div id="loader"></div>';
-        document.getElementById('submit-button').classList.remove('button1');
-
-    }
-
-    function hideLoader() {
-        btnRef.current.disabled = false;
-        document.getElementById('submit-button').innerHTML = 'Login';
-        document.getElementById('submit-button').classList.add('button1');
-    }
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         const username = usernameRef.current.value;
         const password = passwordRef.current.value;
-        showLoader();
-        const a = await login_User({ variables: { input: { username: username, password: password } } });
-        // console.log(a);
-        if (a.data.admin_login.success == false) {
-            toast.error(a.data.admin_login.message, {
-                position: "top-center",
-                autoClose: 3000,
-                hideProgressBar: true,
-                closeOnClick: true,
-                pauseOnHover: true,
-                draggable: true,
-                theme: "colored",
-            })
-
-        } else {
-            toast.success(a.data.admin_login.message, {
-                position: "top-center",
-                autoClose: 3000,
-                hideProgressBar: true,
-                closeOnClick: true,
-                pauseOnHover: true,
-                draggable: true,
-                theme: "colored",
-            });
-            setTimeout(() => {
+        setSubmitting(true);
+        try {
+            const { data } = await login_User({ variables: { input: { username, password } } });
+            if (!data.admin_login.success) {
+                toast.error(data.admin_login.message, TOAST_OPTIONS);
+            } else {
+                toast.success(data.admin_login.message, TOAST_OPTIONS);
                 navigate('/admin/adminpage');
-            }, 1000);
+            }
+        } catch {
+            toast.error("Could not reach the server, please try again", TOAST_OPTIONS);
+        } finally {
+            setSubmitting(false);
         }
-        hideLoader();
     }
 
     return (
@@ -120,9 +88,9 @@ const Loginn = () => {
                     </div>
                 </div>
 
-                <form aria-label="Sign up form" className="rounded-3xl w-full max-w-md p-4 relative" onSubmit={handleSubmit}>
+                <form aria-label="Admin login form" className="rounded-3xl w-full max-w-md p-4 relative" onSubmit={handleSubmit}>
                     <div className="wave-group">
-                        <input required type="text" name="username" id="username" className="input" ref={usernameRef} />
+                        <input required type="text" name="username" id="username" className="input" ref={usernameRef} autoComplete="username" />
                         <span className="bar"></span>
                         <label htmlFor="username" className="label text-[#6b4a1e] font-semibold text-xl mb-2 select-none">
                             {input_text1.map((value, index) => (
@@ -132,7 +100,7 @@ const Loginn = () => {
 
                     </div>
                     <div className="wave-group">
-                        <input required type="password" name="password" id="password" className="input" ref={passwordRef} />
+                        <input required type="password" name="password" id="password" className="input" ref={passwordRef} autoComplete="current-password" />
                         <span className="bar"></span>
                         <label htmlFor="password" className="label text-[#6b4a1e] font-semibold text-xl mb-2 select-none">
                             {input_text2.map((value, index) => (
@@ -141,9 +109,9 @@ const Loginn = () => {
                         </label>
                     </div>
                     <button
-                        className="button1 font-fredoka text-2xl text-[#6b4a1e] bg-[#f4b24a] rounded-3xl border-4 border-[#a56f0a] w-full py-3 mb-6 select-none"
-                        type="submit" ref={btnRef} id='submit-button'>
-                        Login
+                        className={`${submitting ? '' : 'button1 '}font-fredoka text-2xl text-[#6b4a1e] bg-[#f4b24a] rounded-3xl border-4 border-[#a56f0a] w-full py-3 mb-6 select-none`}
+                        type="submit" disabled={submitting} id='submit-button'>
+                        {submitting ? <div id="loader"></div> : 'Login'}
                     </button>
                 </form>
             </div>
