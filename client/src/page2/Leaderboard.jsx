@@ -1,13 +1,14 @@
 import React, { useEffect } from "react";
 import "./Leaderboard.css";
-import { gql, useQuery } from "@apollo/client"; // ✅ you forgot to import useQuery!
+import { gql, useQuery } from "@apollo/client";
 import trophy from "./images/trophy-copy.svg";
 import scroll from "./images/scroll.svg";
 import { useNavigate } from 'react-router-dom';
 // GraphQL query
-export const GET_LEADERBOARD_INFO = gql`
-  query {
+const GET_LEADERBOARD_INFO = gql`
+  query LeaderBoardInfo {
     LeaderBoard_Info {
+      username
       displayname
       points
     }
@@ -16,7 +17,8 @@ export const GET_LEADERBOARD_INFO = gql`
 
 const Leaderboard = () => {
     const navigate = useNavigate();
-    const { data, loading, error } = useQuery(GET_LEADERBOARD_INFO);
+    // cache-and-network: show the last list instantly, then refresh it (points change after every match)
+    const { data, loading, error } = useQuery(GET_LEADERBOARD_INFO, { fetchPolicy: 'cache-and-network' });
     const users = data?.LeaderBoard_Info || [];
 
     useEffect(() => {
@@ -26,7 +28,7 @@ const Leaderboard = () => {
         }
     }, [error, navigate]);
 
-    if (loading)
+    if (loading && !data)
         return (
             <p className="text-center mt-10 text-lg">Loading leaderboard...</p>
         );
@@ -74,7 +76,7 @@ const Leaderboard = () => {
                 >
                     {users.map((user, index) => (
                         <div
-                            key={index}
+                            key={user.username}
                             className="flex items-center justify-between bg-[#f7d25a] rounded-2xl px-5 py-3 text-xl font-semibold select-none hover:bg-[#fdd246]"
                         >
                             <div className="flex items-center gap-3">

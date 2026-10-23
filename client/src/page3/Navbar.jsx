@@ -1,9 +1,9 @@
-import React, { useEffect, useRef, useState, useContext } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import './css/codeeditor.css';
-import { SocketContext } from '../App';
+import { useSocket } from '../socket/SocketContext';
 import { useStore } from '../../store/Store';
 import { gsap } from "gsap";
-import { useQuery, gql, useLazyQuery } from "@apollo/client";
+import { useQuery, gql } from "@apollo/client";
 
 
 const GET_MATCH = gql`
@@ -15,13 +15,18 @@ query Get_matchinfo($matchId: String!) {
 }
 `;
 
+// Format time nicely
+const format = ms => {
+    const total = Math.floor(ms / 1000);
+    const m = Math.floor(total / 60);
+    const s = total % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+};
+
 const Navbar = () => {
-    const socket = useContext(SocketContext)
-    const [player, setplayerinfo] = useState([])
+    const { socket } = useSocket();
     const [timeLeft, setTimeLeft] = useState(0);
-    const [timeOffset, setTimeOffset] = useState(0);
-    // const [isEnded, setIsEnded] = useState(false);
-    const [displaytext, setdisplaytext] = useState('Game is getting started1');
+    const [displaytext, setdisplaytext] = useState('Game is getting started');
 
     const matchinfo = useStore((state) => state.data);
     const setData = useStore((state) => state.setData);
@@ -31,59 +36,36 @@ const Navbar = () => {
 
     const DC = useStore((state) => state.DC);
 
-    // const [timeLeft, setTimeLeft] = useState(5 * 60 + 23);
     const boxRef = useRef(null);
-    const intervalRef = useRef(null); // ✅ Added interval ref
+    const player = useMemo(() => matchinfo?.participants ?? [], [matchinfo]);
 
-    useEffect(() => {
-        if (matchinfo?.participants) {
-            setplayerinfo(matchinfo.participants);
-        }
-    }, [matchinfo])
-
-    const { data, loading, error } = useQuery(GET_MATCH, {
-        variables: { matchId: matchinfo.matchId },
+    // The server's clock decides when the match ends; polling corrects the client clock offset
+    const { data } = useQuery(GET_MATCH, {
+        variables: { matchId: matchinfo?.matchId },
+        skip: !matchinfo?.matchId,
         pollInterval: 5000
     });
 
     useEffect(() => {
-        if (!data || !data.Get_matchinfo || DC) return;
-
-        const match = data.Get_matchinfo; // ✅ define match here
-
-        if (!match.endTime || !match.serverTime) return; // optional safety check
+        const match = data?.Get_matchinfo;
+        if (!match?.endTime || !match.serverTime || DC || isEnded) return;
 
         // --- TIME OFFSET (server vs client) ---
-        const serverNow = new Date(match.serverTime).getTime();
-        const clientNow = Date.now();
-        const offset = serverNow - clientNow;
-        setTimeOffset(offset);
-
+        const offset = new Date(match.serverTime).getTime() - Date.now();
         const end = new Date(match.endTime).getTime();
 
-        // --- LIVE TIMER LOOP ---
-        intervalRef.current = setInterval(() => { // ✅ Using intervalRef
-            const now = Date.now() + offset;
-            const remaining = Math.max(0, end - now);
+        // --- LIVE TIMER LOOP --- (4 updates per second is plenty for a m:ss clock)
+        const interval = setInterval(() => {
+            const remaining = Math.max(0, end - (Date.now() + offset));
             setTimeLeft(remaining);
-            if (remaining === 0 && !isEnded) {
-                setGlobalIsEnded(true)
-                clearInterval(intervalRef.current); // ✅ Using intervalRef
+            if (remaining === 0) {
+                setGlobalIsEnded(true);
+                clearInterval(interval);
             }
-        }, 50);
+        }, 250);
 
-        return () => clearInterval(intervalRef.current); // ✅ Using intervalRef
-    }, [data, isEnded, DC]);
-
-
-
-    // Format time nicely
-    const format = ms => {
-        const total = Math.floor(ms / 1000);
-        const m = Math.floor(total / 60);
-        const s = total % 60;
-        return `${m}:${s.toString().padStart(2, "0")}`;
-    };
+        return () => clearInterval(interval);
+    }, [data, isEnded, DC, setGlobalIsEnded]);
 
     useEffect(() => {
         const tl = gsap.timeline();
@@ -96,14 +78,11 @@ const Navbar = () => {
                 boxRef.current,
                 { y: -100, opacity: 0, duration: 2, delay: 5.3, ease: "power2.in" } // then goes back up & fades out
             );
-
+        return () => tl.kill();
     }, [displaytext]);
 
-
-    // 1️⃣ create a ref for player
+    // keep the latest players in a ref for the socket handler
     const playerRef = useRef(player);
-
-    // 2️⃣ keep the ref updated
     useEffect(() => {
         playerRef.current = player;
     }, [player]);
@@ -111,26 +90,23 @@ const Navbar = () => {
     useEffect(() => {
         if (!socket) return;
 
-        socket.on('notify', (data, updatedMatch) => {
-            console.log(data)
-            console.log(updatedMatch)
-            let displayname = playerRef.current.find(p => p.username === data)?.displayname;
-            console.log(displayname)
-            setdisplaytext(`${displayname} solved a problem!`)
-            setData(updatedMatch)
-        })
-        
-        return () => {            
-            socket.off('notify');
+        // updatedMatch comes from the database, so both players always see the same scores
+        const onNotify = (username, updatedMatch) => {
+            const displayname = playerRef.current.find(p => p.username === username)?.displayname ?? username;
+            setdisplaytext(`${displayname} solved a problem!`);
+            if (updatedMatch) setData(updatedMatch);
         };
+        socket.on('notify', onNotify);
 
-    }, [socket]);
+        return () => {
+            socket.off('notify', onNotify);
+        };
+    }, [socket, setData]);
 
-    useEffect(()=>{
-        if(isEnded){
-            socket.emit('game_over',matchinfo,socket.id);
-        }
-    },[isEnded])
+    // Our clock reached 0:00: ask the server to end the match (it also ends it by itself)
+    useEffect(() => {
+        if (isEnded) socket?.emit('game_over');
+    }, [isEnded, socket]);
 
     return (
         <div className="countdown-page">

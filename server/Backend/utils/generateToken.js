@@ -9,9 +9,10 @@ export function generateToken(user) {
 
 
 
-    return jwt.sign({ username:user.username,userid: user._id }, process.env.JWT_KEY);
+    return jwt.sign({ username:user.username,userid: user._id }, process.env.JWT_KEY, { expiresIn: '1d' });
     // You're creating a token using the jsonwebtoken library.
     // This token holds the user's info and is locked with a secret key.
+    // expiresIn: '1d' → the token stops working after one day (same as the session), so a stolen token can't be used forever.
 
     //jwt.sign(...)
     // This means: "Make a token"

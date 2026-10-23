@@ -1,14 +1,10 @@
-// import Joi from 'joi';
 import bcrypt from 'bcrypt';
 
+// Hashes a password. Never log the input: it is the user's plain-text password.
 const Authenticator = async (input) => {
-  console.log(input)
-  // const { password } = input;
-  // Hash the password
   const salt = await bcrypt.genSalt(10);
   const hash = await bcrypt.hash(input, salt);
 
-  // Return processed and safe data
   return {
     hash,
   };

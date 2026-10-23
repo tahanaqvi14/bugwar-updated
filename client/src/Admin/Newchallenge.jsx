@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, gql, useMutation } from "@apollo/client";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 
 const CREATE_CHALLENGE = gql`
   mutation createChallenge($input: ChallengeInput!) {
@@ -16,24 +15,10 @@ const CHECK = gql`
   }
 `;
 
-const GET_CHECK = gql`
-  query Get_challengeall {
-    Get_challengeall {
-      function_name
-      problem_statement
-      id_number
-      difficulty
-      testcases {
-        case
-        expected
-      }
-    }
-  }
-`;
-
 const Newchallenge = () => {
   const navigate = useNavigate();
   const [authError, setAuthError] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const [createChallengeMutation] = useMutation(CREATE_CHALLENGE);
 
@@ -47,7 +32,8 @@ const Newchallenge = () => {
       if (data && data.check === false) {
         setAuthError(true);
         toast.error("You need to login!");
-        setTimeout(() => navigate("/admin"), 1500);
+        const timer = setTimeout(() => navigate("/admin"), 1500);
+        return () => clearTimeout(timer);
       }
     }
   }, [data, loading, navigate]);
@@ -56,39 +42,42 @@ const Newchallenge = () => {
 
   if (authError)
     return (
-      <>
-        <ToastContainer />
-        <div className="min-h-screen flex justify-center items-center text-2xl text-red-500 font-bold">
-          You need to login
-        </div>
-      </>
+      <div className="min-h-screen flex justify-center items-center text-2xl text-red-500 font-bold">
+        You need to login
+      </div>
     );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const testcase1Input = document.getElementById("testcase1_input").value;
-    const testcase2Input = document.getElementById("testcase2_input").value;
-    const testcase1sol = document.getElementById("testcase1_solution").value;
-    const testcase2sol = document.getElementById("testcase2_solution").value;
+    const form = e.target.elements;
+    const testcase1Input = form.testcase1_input.value;
+    const testcase2Input = form.testcase2_input.value;
+    const testcase1sol = form.testcase1_solution.value.trim();
+    const testcase2sol = form.testcase2_solution.value.trim();
 
-    const function_name = document.getElementById("funcName").value;
-    const problem_statement = document.getElementById("question").value;
-    const difficulty = document.getElementById("difficulty").value;
+    const function_name = form.funcName.value.trim();
+    const problem_statement = form.question.value.trim();
+    const difficulty = form.difficulty.value;
+    const input_type = form.input_type.value;
 
     const isValidIntegerList = (str) => {
       const nums = str.split(",").map((s) => s.trim());
-      if (nums.length === 0) return false;
-      return nums.every((n) => /^-?\d+$/.test(n));
+      return nums.length > 0 && nums.every((n) => /^-?\d+$/.test(n));
     };
+
+    if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(function_name)) {
+      toast.error("Function name must be a valid JavaScript name (letters, digits, _ or $)");
+      return;
+    }
 
     if (!isValidIntegerList(testcase1Input) || !isValidIntegerList(testcase2Input)) {
       toast.error("Test case inputs must be integers, separated by commas!");
       return;
     }
-    
-    if (!isValidIntegerList(testcase1sol) || !isValidIntegerList(testcase2sol)) {
-      toast.error("Test case solution must be integer");
+
+    if (!/^-?\d+$/.test(testcase1sol) || !/^-?\d+$/.test(testcase2sol)) {
+      toast.error("Test case solution must be a single integer");
       return;
     }
 
@@ -104,6 +93,7 @@ const Newchallenge = () => {
       },
     ];
 
+    setSubmitting(true);
     try {
       const { data } = await createChallengeMutation({
         variables: {
@@ -111,21 +101,22 @@ const Newchallenge = () => {
             function_name,
             problem_statement,
             difficulty,
+            input_type,
             testcases: formattedTestcases,
           },
         },
       });
-      console.log(data);
       if (data.result === true) {
         toast.success("Problem Created Successfully!");
-
-        setTimeout(() => window.location.reload(), 1500);
+        navigate("/admin/adminpage");
       } else {
-        toast.error("Failed to create problem (server returned false)");
+        toast.error("Failed to create problem");
       }
     } catch (err) {
-      console.error("GraphQL error:", err);
-      toast.error("Failed to create problem (network/server error)");
+      // e.g. a validation message from the server
+      toast.error(err?.message || "Failed to create problem (network/server error)");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -139,9 +130,6 @@ const Newchallenge = () => {
         WebkitFontSmoothing: "antialiased",
       }}
     >
-      {/* Toast Container */}
-      <ToastContainer />
-
       <div className="w-1/2 bg-[#fce9b8] border-4 border-[#7f4f0a] p-6 rounded-3xl shadow-[6px_6px_0_0_#7f4f0a]">
         <h1 className="text-3xl text-[#7a4f0a] mb-6 drop-shadow-sm font-bold">
           Create New Problem
@@ -185,6 +173,25 @@ const Newchallenge = () => {
               <option value="Easy">Easy</option>
               <option value="Medium">Medium</option>
               <option value="Hard">Hard</option>
+            </select>
+          </div>
+
+          {/* Input type */}
+          <div>
+            <label
+              htmlFor="input_type"
+              className="block text-[#7a4f0a] font-bold text-xl mb-1"
+            >
+              How are the inputs passed?
+            </label>
+            <select
+              id="input_type"
+              defaultValue="numbers"
+              className="w-full rounded-md border-2 border-[#7f4f0a] bg-transparent text-[#7a4f0a] text-xl px-3 py-2"
+            >
+              <option value="numbers">Separate numbers → f(a, b)</option>
+              <option value="array">One array → f(arr)</option>
+              <option value="array_and_k">Array + last number → f(arr, k)</option>
             </select>
           </div>
 
@@ -266,9 +273,10 @@ const Newchallenge = () => {
           {/* Submit */}
           <button
             type="submit"
+            disabled={submitting}
             className="w-full bg-[#f7b63d] text-white font-bold text-xl py-3 rounded-lg shadow-[3px_3px_0_0_#7f4f0a]"
           >
-            Create Problem
+            {submitting ? "Creating..." : "Create Problem"}
           </button>
         </form>
       </div>

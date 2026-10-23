@@ -27,9 +27,9 @@ const Popup = () => {
 
 
   const { data, loading, error } = useQuery(GET_MATCH, {
-    variables: { matchId: matchinfo.matchId },
+    variables: { matchId: matchinfo?.matchId },
     fetchPolicy: "no-cache",
-    skip: !(isEnded || DC),
+    skip: !matchinfo?.matchId || !(isEnded || DC),
   });
 
   let winnerData;
@@ -41,7 +41,8 @@ const Popup = () => {
   if (matchData.winner !== 'N') {
     winnerData = matchData.participants.find(p => p.username === matchData.winner);
   }
-  console.log(matchData)
+  // Highest score first, so the medals match the points
+  const standings = [...matchData.participants].sort((a, b) => b.points - a.points);
 
   return (
     <div style={{
@@ -75,7 +76,7 @@ const Popup = () => {
           </h2>
 
           <div className="flex flex-col space-y-3 max-h-80 overflow-y-auto pr-2">
-            {matchData.participants.map((p, index) => {
+            {standings.map((p, index) => {
               const note = matchData.status === "Interrupted" && p.username !== matchData.winner
                 ? " (LEFT EARLY)"
                 : "";

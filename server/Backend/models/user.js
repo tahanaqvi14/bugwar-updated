@@ -15,10 +15,9 @@ const user=mongoose.Schema({
         unique:true
     },
     password:{
+        // bcrypt hash of the password (the 8-20 character rule is checked on the plain password before hashing)
         type:String,
         required:true,
-        minlength:8,
-        trim:true,//Removes leading/trailing whitespace automatically before saving.
     },
     points: {
         type: Number,
@@ -35,12 +34,8 @@ const user=mongoose.Schema({
         trim:true,
         unique:true
     },
-    sessiontoken:{
-        type:Boolean,
-        default:false
-    },
     total_matches: {
-        type: [String], // or Number if just a count
+        type: [String], // matchIds of every match this user played
         default: []
     }
 })

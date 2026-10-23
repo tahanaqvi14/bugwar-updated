@@ -1,7 +1,6 @@
-import React, { useState, useRef,useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMutation, useQuery, gql } from '@apollo/client';
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import { useNavigate } from 'react-router-dom';
 import account from "./images/account.svg";
 import edit from "./images/edit.svg";
@@ -11,6 +10,7 @@ import cross from "./images/cross.svg";
 import { useApolloClient } from "@apollo/client";
 import History from './History';
 import Changepwd from './Changepwd';
+import { useSocket } from '../socket/SocketContext';
 import './components/style.css'
 
 
@@ -43,9 +43,10 @@ const GET_PROFILE_INFO = gql`
             }
   }`
 
-  const SEND_EMAIL_MUTATION = gql`
-  mutation SendEmail($email: String!, $username: String!) {
-    send_email(email: $email, username: $username) {
+// Emails a password-reset code to the address saved on the logged-in account
+const SEND_RESET_OTP_MUTATION = gql`
+  mutation SendResetOtp {
+    send_reset_otp {
       success
       message
     }
@@ -66,17 +67,18 @@ const DISPLAY_NAME_QUERY = gql`
 const Profile = () => {
     const client = useApolloClient();
     const navigate = useNavigate();
+    const { disconnectSocket } = useSocket();
     const [showOTPPage, setShowOTPPage] = useState(false)
-    const btnRef = useRef();
+    const [sendingOtp, setSendingOtp] = useState(false);
     // GraphQL hooks
-    const { data, loading, error } = useQuery(GET_PROFILE_INFO);
+    const { data, loading, error } = useQuery(GET_PROFILE_INFO, { fetchPolicy: 'cache-and-network' });
     const [updateProfile] = useMutation(PROFILE_MUTATION, {
         refetchQueries: [{ query: DISPLAY_NAME_QUERY }],
         awaitRefetchQueries: true,
       });
       
     const [logoutProfile] = useMutation(LOGOUT_MUTATION);
-    const [sendEmail] = useMutation(SEND_EMAIL_MUTATION);
+    const [sendResetOtp] = useMutation(SEND_RESET_OTP_MUTATION);
 
     const users = data?.FindUserForProfile;
 
@@ -84,7 +86,6 @@ const Profile = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [displayName, setDisplayName] = useState('');
     const [tempName, setTempName] = useState('');
-    const [userData, setUserData] = useState({});
     // Update state when query data arrives
     useEffect(() => {
         if (users) {
@@ -101,34 +102,27 @@ const Profile = () => {
     }, [error, navigate]);
 
 
-    function showLoader() {
-        btnRef.current.disabled = true;
-        document.getElementById('submit-button').innerHTML = '<div id="loader"></div>';
-        document.getElementById('submit-button').classList.remove('button1');
-    
-      }
-      function hideLoader() {
-        btnRef.current.disabled = false;
-        document.getElementById('submit-button').innerHTML = 'Change Password';
-        document.getElementById('submit-button').classList.add('button1');
-      }
-
     // Handlers
     const handleEditClick = () => {
         setIsEditing(true);
     };
 
     const handleSave = async () => {
+        const newName = tempName.trim();
+        if (newName.length < 3 || newName.length > 10) {
+            toast.error("Display name must be 3 to 10 characters");
+            return;
+        }
         try {
             await updateProfile({
-                variables: { input: { newdisplayname: tempName } },
+                variables: { input: { newdisplayname: newName } },
             });
-            setDisplayName(tempName.trim() || "Unnamed");
+            setDisplayName(newName);
             setIsEditing(false);
             toast.success("Profile updated successfully!");
 
         } catch (err) {
-            toast.error("Failed to update profile!");
+            toast.error(err?.message || "Failed to update profile!");
         }
     };
 
@@ -143,6 +137,7 @@ const Profile = () => {
             const { success, message } = res.data.logout;
 
             if (success) {
+                disconnectSocket(); // close the game connection that belonged to this login
                 await client.clearStore();
 
                 toast.success(message || "Logged out successfully!");
@@ -186,16 +181,20 @@ const Profile = () => {
     }
 
     async function changepwd() {
-        showLoader();
-        
-        const { data } = await sendEmail({ variables: { email: users?.email, username:'null' } })
-        setUserData({ username:users?.username,message: data.send_email.message });
-        console.log(data);
-        if (!data.send_email.success) {
-          return toast.error(data.send_email.message);
+        setSendingOtp(true);
+        try {
+            const { data } = await sendResetOtp();
+            if (!data.send_reset_otp.success) {
+                toast.error(data.send_reset_otp.message);
+                return;
+            }
+            toast.success(data.send_reset_otp.message);
+            setShowOTPPage(true);
+        } catch {
+            toast.error("Could not reach the server, please try again");
+        } finally {
+            setSendingOtp(false);
         }
-        hideLoader()
-        setShowOTPPage(true);
     }
 
 
@@ -246,6 +245,7 @@ const Profile = () => {
                                             onClick={handleSave}
                                             className="w-7 hover:scale-110 transition"
                                             src={save}
+                                            alt="Save"
                                         />
                                         <img
                                             onClick={handleCancel}
@@ -279,18 +279,18 @@ const Profile = () => {
                         </button>
                     {/* CHANGE PASSWORD BUTTON */}
                         <button
-                            ref={btnRef}
                             onClick={changepwd}
-                            className="text-2xl font-bold w-auto text-[#b84b00] button1 cursor-pointer"
+                            disabled={sendingOtp}
+                            className={`text-2xl font-bold w-auto text-[#b84b00] cursor-pointer${sendingOtp ? '' : ' button1'}`}
                             id='submit-button'
                         >
-                            Change Password
+                            {sendingOtp ? <div id="loader"></div> : 'Change Password'}
                         </button>
 
                     </div>
                 </div>
                 {/* <history />` */}
-                {users?.username && <History username={users.username} />}
+                {users?.username && <History />}
             </div>
             {/* OTP Page */}
             {showOTPPage && (
@@ -308,7 +308,6 @@ const Profile = () => {
                         zIndex: 999,
                     }}>
                     <Changepwd
-                        userData={userData}
                         onClose={() => setShowOTPPage(false)} />
                 </div>
             )}

@@ -1,26 +1,26 @@
 import jwt from 'jsonwebtoken';
 // Imports the jsonwebtoken library to verify tokens.
-//accessing the user's info from the database
 
+export default function isloggedin(req) {
+    // It checks if the user is logged in before protected resolvers run (profile, leaderboard, game, etc.)
+    // The user counts as logged in only when BOTH of these agree:
+    //  1. the server-side session has a user (req.session.user, saved at login)
+    //  2. the JWT cookie is valid and belongs to that same user
+    // Resolvers read the username from the session, so checking only the JWT is not enough:
+    // after the session expires the resolvers would crash with "Cannot read properties of undefined".
 
+    const sessionUsername = req.session?.user?.username;
+    const token = req.cookies?.token;
 
-export default async function isloggedin(req) {
-    //isloggedin is an Express middleware function.
-    // It runs before protected routes (like dashboard, profile, etc.)
-    // It checks if the user is logged in by verifying their JWT token.
-
-    if (!req.cookies.token || req.cookies.token === "") {
-        // It checks if the user has a token in their cookies OR If there's no token, or it's an empty string, it means the user is not logged in.
-        return (false);
-
+    if (!sessionUsername || !token) {
+        return false;
     }
-    else {
-        try {
-            let data = jwt.verify(req.cookies.token, process.env.JWT_KEY);
-            //this verifies the token in the cookies by the secret key in .env file
-            return true;
-        } catch (error) {
-            return false;
-        }
+
+    try {
+        const data = jwt.verify(token, process.env.JWT_KEY);
+        //this verifies the token in the cookies by the secret key in .env file (and that it has not expired)
+        return data.username === sessionUsername;
+    } catch {
+        return false;
     }
 }

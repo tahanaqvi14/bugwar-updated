@@ -2,8 +2,14 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./style.css";
 import { useQuery, gql, useMutation } from "@apollo/client";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
+
+// How the numbers of a test case are passed to the player's function
+const INPUT_TYPE_LABELS = {
+  numbers: "Numbers → f(a, b)",
+  array: "Array → f(arr)",
+  array_and_k: "Array + last number → f(arr, k)",
+};
 
 // GraphQL queries/mutations
 const GET_CHALLENGE = gql`
@@ -13,6 +19,7 @@ const GET_CHALLENGE = gql`
       problem_statement
       _id
       difficulty
+      input_type
       testcases {
         case
         expected
@@ -28,6 +35,7 @@ const UPDATE_CHALLENGE = gql`
       function_name
       problem_statement
       difficulty
+      input_type
       testcases {
         case
         expected
@@ -52,7 +60,8 @@ const Admin = () => {
   const [updateChallengeMutation] = useMutation(UPDATE_CHALLENGE);
   const [del] = useMutation(DELETE);
 
-  const { data, loading, error } = useQuery(GET_CHALLENGE, {
+  const { loading, error } = useQuery(GET_CHALLENGE, {
+    fetchPolicy: "network-only",
     onCompleted: (d) => setLocalData(d.Get_challengeall),
   });
 
@@ -147,6 +156,7 @@ const Admin = () => {
             function_name: problem.function_name,
             problem_statement: problem.problem_statement,
             difficulty: problem.difficulty,
+            input_type: problem.input_type || "numbers",
             testcases: formattedTestcases,
           },
         },
@@ -187,7 +197,6 @@ const Admin = () => {
           "linear-gradient(180deg, #8fc6bb 0%, #f9b75a 50%, #f7a72b 100%)",
       }}
     >
-      <ToastContainer position="top-right" autoClose={3000} />
       <div className="bg-[#fce9b8] border-4 border-[#7f4f0a] p-6 rounded-3xl shadow-[6px_6px_0_0_#7f4f0a] space-y-6 w-full max-w-4xl">
         <div className="flex justify-between items-center mb-3">
           <h1 className="text-3xl font-bold text-[#7a4f0a] drop-shadow-sm">
@@ -263,6 +272,24 @@ const Admin = () => {
                           </select>
                         ) : (
                           problem.difficulty
+                        )}
+                      </p>
+
+                      <p>
+                        <strong>Input type:</strong>{" "}
+                        {isEditing ? (
+                          <select
+                            name="input_type"
+                            value={problem.input_type || "numbers"}
+                            onChange={(e) => handleChange(e, problem)}
+                            className="border-2 border-[#7f4f0a] rounded-md p-1"
+                          >
+                            {Object.entries(INPUT_TYPE_LABELS).map(([value, label]) => (
+                              <option key={value} value={value}>{label}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          INPUT_TYPE_LABELS[problem.input_type || "numbers"]
                         )}
                       </p>
 

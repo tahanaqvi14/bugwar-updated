@@ -1,9 +1,0 @@
-/* s.css */
-.clip-custom {
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 75%);
-}
-
-#one {
-    background: linear-gradient(135deg, #f59e0b, #b45309);
-    box-shadow: 0 10px 25px rgba(180, 83, 9, 0.6);
-  }

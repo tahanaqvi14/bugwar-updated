@@ -1,5 +1,7 @@
 import { gql } from 'graphql-tag';
 
+// Matches are created, scored and finished by the server (see socket/gameSocket.js),
+// so there are no GraphQL mutations for them: a browser must not be able to change scores.
 const match_typeDefs = gql`
     type Participant {
         username: String!
@@ -8,7 +10,7 @@ const match_typeDefs = gql`
     }
 
     type Match {
-        matchId: String!        
+        matchId: String!
         participants: [Participant!]!
         winner: String
         matchDate: String
@@ -17,27 +19,10 @@ const match_typeDefs = gql`
         serverTime: String
     }
 
-    input ParticipantInput {
-        username: String!
-        points: Int
-    }
-        
-    input MatchInput {
-        participants: [ParticipantInput!]!
-        winner: String
-    }
-
-    type Mutation {
-        createMatch(input: MatchInput!): Match!
-        updatematchpoint(matchId: String!,username:String!): Match!
-        updateWinner(matchId: String!, winner: String!): Match!
-        matchinterrupt(matchId: String!,username:String!):Match!
-        endgame(matchId: String!):Match!
-    }
-
     type Query{
         Get_matchinfo(matchId: String!): Match
-        Get_allmatch(username: String!): [Match]
+        # Matches of the logged-in user, newest first
+        Get_allmatch: [Match]
     }
 `
 

@@ -1,113 +1,173 @@
-import Authenticator from '../../controllers/Authenticator.js'; // FIX: correct relative import
+import Authenticator from '../../controllers/Authenticator.js';
 import { Check_login_info } from '../../controllers/Check_login_info.js';
 import { Adminauth } from '../../controllers/Adminauth.js';
-import { getUserModel } from '../../utils/getUserModel.js'; // FIX: correct relative import
-import Email from '../../utils/Email.js'; // FIX: correct relative import
+import { getUserModel } from '../../utils/getUserModel.js';
+import { requireUser } from '../../utils/auth.js';
+import { issueOtp, checkOtp, deleteOtp } from '../../utils/otp.js';
+import { destroySession } from '../../utils/session.js';
+import { cookieOptions } from '../../config.js';
+import { disconnectUserSockets } from '../../game/state.js';
+import {
+    validate,
+    signupSchema,
+    displayNameRule,
+    usernameRule,
+    emailRule,
+    passwordRule,
+    otpRule
+} from '../../utils/validation.js';
 
+// Fields that are safe to send to the browser (never the password hash)
+const PUBLIC_FIELDS = 'displayname username points sub_name total_matches email';
 
+const fail = (message) => ({ success: false, message });
 
 const resolvers = {
     Query: {
         LeaderBoard_Info: async (parent, args, context) => {
-            if (context.loggedIn == false) {
-                throw new Error("Not authenticated");
-            }
+            requireUser(context);
             const UserModel = getUserModel('Users');
-            const users = await UserModel.find().sort({ points: -1 });
-            return users;
+            // Only what the leaderboard needs: no emails, no password hashes
+            return UserModel.find({}, 'displayname username points sub_name')
+                .sort({ points: -1, displayname: 1 })
+                .lean();
         },
 
         FindUserForProfile: async (parent, args, context) => {
-            // const { user } = context; // FIX: Use context.user from JWT/session
-            // const { req } = context; // FIX: Use context.user from JWT/session
-            // const is_user_authenticated = await isloggedin(req); // this is for middle ware
-
-            // if (is_user_authenticated) {
-            //     const UserModel = getUserModel('Users');
-            //     const user_all_info = await UserModel.findOne({ username: user.username });
-            //     return user_all_info;
-            // } else {
-            //     console.log(is_user_authenticated);
-            // }
-            if (context.loggedIn == false) {
-                throw new Error("Not authenticated");
-            }
+            const username = requireUser(context);
             const UserModel = getUserModel('Users');
-            const user_all_info = await UserModel.findOne({ username: context.req.session.user.username });
-            return user_all_info;
-
+            return UserModel.findOne({ username }, PUBLIC_FIELDS).lean();
         },
 
         Main_menu: async (parent, args, context) => {
-            if (context.loggedIn == false) {
-                throw new Error("Not authenticated");
-            }
+            const username = requireUser(context);
             const UserModel = getUserModel('Users');
-            const user_all_info = await UserModel.findOne({ username: context.req.session.user.username }); // FIX: await
-            // console.log(user_all_info)
-            return user_all_info
+            return UserModel.findOne({ username }, PUBLIC_FIELDS).lean();
         }
+    },
+
+    // total_matches is stored as a list of match ids; the API returns how many there are
+    user: {
+        total_matches: (user) => user.total_matches?.length ?? 0,
     },
 
     Mutation: {
         admin_login: async (parent, args, context) => {
-            console.log(args);
-            let fetchinfo = args.input
-            const result = await Adminauth(fetchinfo, context);
-            return result;
-
+            return Adminauth(args.input, context);
         },
 
-        send_email: async (parent, args, context) => {
+        // Sign up step 1: check the details and email a code to the new address
+        send_email: async (parent, args) => {
+            const emailCheck = validate(emailRule, args.email);
+            if (emailCheck.error) return fail(emailCheck.error);
+            const usernameCheck = validate(usernameRule, args.username);
+            if (usernameCheck.error) return fail(usernameCheck.error);
+
+            const email = emailCheck.value;
+            const username = usernameCheck.value;
             const UserModel = getUserModel("Users");
-            const { email, username } = args;
 
-            if (username!='null') {
-                const emailExists = await UserModel.findOne({ email });
-                if (emailExists) {
-                    return {
-                        success: false,
-                        message: "Email already exists"
-                    };
-                }
-    
-                const usernameExists = await UserModel.findOne({ username });
-                if (usernameExists) {
-                    return {
-                        success: false,
-                        message: "Username already exists"
-                    };
-                }
+            if (await UserModel.exists({ email })) {
+                return fail("Email already exists");
             }
-            else{
-
+            if (await UserModel.exists({ username })) {
+                return fail("Username already exists");
             }
 
-            const result = await Email(email);
-            return {
-                success: true,
-                message: result.message
-            };
+            return issueOtp(email, 'signup');
         },
 
-        changepwdd: async (parent, args, context) => {
-            const UserModel = getUserModel("Users");
-            const { username,pwd } = args;
-            const pass = await Authenticator(pwd);
+        // Sign up step 2: create the account only if the emailed code is correct
+        user_creation: async (parent, args) => {
             try {
-                const updatedUser = await UserModel.findOneAndUpdate(
-                    { username},
-                    {
-                        password: pass.hash,
-                    },
-                    { new: true }
-                )
-            } catch (error) {
+                const { value, error } = validate(signupSchema, args.input);
+                if (error) return fail(error);
+
+                const otpResult = await checkOtp(value.email, 'signup', value.otp);
+                if (!otpResult.success) return otpResult;
+
+                const UserModel = getUserModel('Users');
+                if (await UserModel.exists({ email: value.email })) {
+                    return fail("Email already exists");
+                }
+                if (await UserModel.exists({ username: value.username })) {
+                    return fail("Username already exists");
+                }
+
+                const user_all_detail = await Authenticator(value.password);
+                await UserModel.create({
+                    displayname: value.displayname,
+                    username: value.username,
+                    password: user_all_detail.hash,
+                    email: value.email,
+                });
+                await deleteOtp(value.email, 'signup'); // a code can only create one account
+
                 return {
-                    success: false,
-                    message: error
+                    success: true,
+                    message: 'User created successfully'
                 };
-                
+            } catch (error) {
+                console.error('user_creation failed:', error);
+                return fail('Could not create the account, please try again');
+            }
+        },
+
+        user_login: async (parent, args, context) => {
+            try {
+                const UseruserModel = getUserModel('Users');
+                const username = String(args.input.username ?? '').trim();
+                const is_this_a_user = await UseruserModel.findOne({ username });
+                if (!is_this_a_user) {
+                    return fail("User not found");
+                }
+                return await Check_login_info(args.input, context, is_this_a_user);
+            } catch (error) {
+                console.error('user_login failed:', error);
+                return fail('Login failed, please try again');
+            }
+        },
+
+        // Password reset step 1: email a code to the address saved on the logged-in account
+        send_reset_otp: async (parent, args, context) => {
+            const username = requireUser(context);
+            const user = await getUserModel('Users').findOne({ username }, 'email').lean();
+            if (!user?.email) return fail('No email address is saved for this account');
+            return issueOtp(user.email, 'reset');
+        },
+
+        // Password reset step 2: check the code (it stays valid for the actual change)
+        verify_reset_otp: async (parent, args, context) => {
+            const username = requireUser(context);
+            const otpCheck = validate(otpRule, args.otp);
+            if (otpCheck.error) return fail(otpCheck.error);
+
+            const user = await getUserModel('Users').findOne({ username }, 'email').lean();
+            return checkOtp(user.email, 'reset', otpCheck.value);
+        },
+
+        // Password reset step 3: only the logged-in user, and only with a valid emailed code
+        changepwdd: async (parent, args, context) => {
+            const username = requireUser(context);
+            const otpCheck = validate(otpRule, args.otp);
+            if (otpCheck.error) return fail(otpCheck.error);
+            const pwdCheck = validate(passwordRule, args.pwd);
+            if (pwdCheck.error) return fail(pwdCheck.error);
+
+            try {
+                const UserModel = getUserModel("Users");
+                const user = await UserModel.findOne({ username });
+                if (!user) return fail('User not found');
+
+                const otpResult = await checkOtp(user.email, 'reset', otpCheck.value, { consume: true });
+                if (!otpResult.success) return otpResult;
+
+                const pass = await Authenticator(pwdCheck.value);
+                user.password = pass.hash;
+                await user.save();
+            } catch (error) {
+                console.error('changepwdd failed:', error);
+                return fail('Could not change the password, please try again');
             }
             return {
                 success: true,
@@ -115,107 +175,19 @@ const resolvers = {
             };
         },
 
-        user_login: async (parent, args, context) => {
-            try {
-                const UseruserModel = getUserModel('Users');
-                const fetchedinfo = args.input;
-                const username = fetchedinfo.username;
-                let is_this_a_user = await UseruserModel.findOne({ username: username });
-                if (is_this_a_user != null) {
-                    if (is_this_a_user.sessiontoken == false) {
-                        const result = await Check_login_info(fetchedinfo, context, is_this_a_user);
-                        // console.log(result)
-                        if (result.success == true) {
-                            is_this_a_user.sessiontoken = true;
-                            await is_this_a_user.save();
-                        }
-                        return result;
-                    }
-                    else {
-                        return {
-                            success: false,
-                            message: "User already loggedin"
-                        }
-                    }
-                    // const checking=Check_login_info(fetchedinfo,context,is_this_a_user);
-                } else {
-                    return {
-                        success: false,
-                        message: "User not found"
-                    }
-                }
-            } catch (error) {
-                return {
-                    success: false,
-                    message: error
-                }
-            }   
-        },
-
-    
-        user_creation: async (parent, args) => {
-            try {
-                const UserModel = getUserModel('Users');
-                const fetchedinfo = args.input;
-                const username = fetchedinfo.username;
-                const user_all_detail = await Authenticator(fetchedinfo.password);
-                await UserModel.create({
-                    displayname: fetchedinfo.displayname,
-                    username: fetchedinfo.username,
-                    password: user_all_detail.hash,
-                    email:fetchedinfo.email,
-                })
-                return {
-                    success: true,
-                    message: 'User created successfully'
-                };
-            } catch (error) {
-                return {
-                    success: false,
-                    message: `${error.message}`
-                }
-            }
-        },
-
         logout: async (parent, args, context) => {
+            const username = context.req.session?.user?.username;
             try {
-                const UserModel = getUserModel('Users');
-                const updatedUser = await UserModel.findOneAndUpdate(
-                    { username: context.req.session.user.username },
-                    {
-                        sessiontoken: false,
-                    },
-                    { new: true }
-                );
-
                 // --- Destroy session ---
-                if (context.req.session) {
-                    await new Promise((resolve, reject) => {
-                        context.req.session.destroy(err => {
-                            if (err) {
-                                console.error("Error destroying session:", err);
-                                reject(err);
-                            } else {
-                                resolve();
-                            }
-                        });
-                    });
-                }
+                await destroySession(context.req);
 
-                // --- Clear JWT cookie ---
-                context.res.clearCookie("token", {
-                    httpOnly: true,
-                    sameSite: "lax",
-                    secure: process.env.NODE_ENV === "production", // should be true in production
-                });
+                // --- Clear cookies --- (must use the same options they were set with,
+                // otherwise the browser ignores the request in production)
+                context.res.clearCookie("token", cookieOptions());
+                context.res.clearCookie("connect.sid", cookieOptions());
 
-                // --- Clear username cookie (if you set one) ---
-                context.res.clearCookie("username", {
-                    sameSite: "lax",
-                    secure: process.env.NODE_ENV === "production",
-                });
-
-                console.log("✅ User logged out successfully");
+                // --- Close this user's game connections (other tabs too) ---
+                if (username) disconnectUserSockets(username);
 
                 return {
                     success: true,
@@ -223,56 +195,21 @@ const resolvers = {
                 };
             } catch (error) {
                 console.error("❌ Logout error:", error);
-                return {
-                    success: false,
-                    message: `Logout failed: ${error.message}`,
-                };
+                return fail("Logout failed, please try again");
             }
         },
-
-        remove: async (parent, args, context) => {
-
-            let usernames = args.usernames;
-            const UserModel = getUserModel('Users');
-            const updatedUser = await UserModel.findOneAndUpdate(
-                { username: usernames },
-                {
-                    sessiontoken: false,
-                },
-                { new: true }
-            );m
-            return updatedUser;
-        },
-
 
         Update: async (parent, args, context) => {
-            try {
-                // const { user } = context;
-                // if (!user || !user.username) {
-                //     throw new Error('User not authenticated');
-                // }
+            const username = requireUser(context);
+            const { value, error } = validate(displayNameRule, args.input?.newdisplayname);
+            if (error) throw new Error(error);
 
-                const UserModel = getUserModel('Users');
-                const fetchedinfo = args.input;
-
-                // const After_Auth = await Authenticator({
-                //     username: user.username,
-                //     displayname: fetchedinfo.newdisplayname,
-                //     password: fetchedinfo.newpassword
-                // });
-
-                const updatedUser = await UserModel.findOneAndUpdate(
-                    { username: context.req.session.user.username },
-                    {
-                        displayname: fetchedinfo.newdisplayname,
-                    },
-                    { new: true }
-                );
-
-                return updatedUser;
-            } catch (error) {
-                throw new Error(`Failed to update user: ${error.message}`);
-            }
+            const UserModel = getUserModel('Users');
+            return UserModel.findOneAndUpdate(
+                { username },
+                { displayname: value },
+                { new: true, projection: PUBLIC_FIELDS }
+            ).lean();
         }
     }
 };

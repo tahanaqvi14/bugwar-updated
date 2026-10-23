@@ -1,19 +1,15 @@
 import mongoose from 'mongoose';
-import express from "express";
-const app = express();
-app.use(express.json());
+import { requireEnv } from '../config.js';
 
 async function connectToDatabase() {
     try {
-        await mongoose.connect(process.env.MONGO_URI, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-        });
+        // (useNewUrlParser / useUnifiedTopology are no longer needed: they are the default since Mongoose 6)
+        await mongoose.connect(requireEnv('MONGO_URI'));
 
         console.log("✅ MongoDB Connected Successfully");
 
     } catch (err) {
-        console.error("❌ MongoDB Connection Error:", err);
+        console.error("❌ MongoDB Connection Error:", err.message);
         process.exit(1);
     }
 };

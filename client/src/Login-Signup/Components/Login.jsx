@@ -1,10 +1,10 @@
-import React, { useRef,useContext, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import './Login.css'
 import { useMutation, gql } from '@apollo/client'
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import { useNavigate } from 'react-router-dom';
-import { SocketContext } from '../../App';
+import { useSocket } from '../../socket/SocketContext';
+import { TOAST_OPTIONS } from '../../config';
 
 //zain ka module ha yeh
 
@@ -20,64 +20,48 @@ const LOGIN_USER_MUTATION = gql`
     }
 `
 
-const Login = ({ connectSocket }) => {
-  const socket = useContext(SocketContext);
-  console.log(socket);
-  const navigate = useNavigate();  
+const Login = () => {
+  const { socket, connectSocket } = useSocket();
+  const navigate = useNavigate();
 
-  const btnRef = useRef();
   const [login_User] = useMutation(LOGIN_USER_MUTATION);
+  const [loading, setLoading] = useState(false);
   const usernameRef = useRef();
   const passwordRef = useRef();
 
-
-
-  function showLoader() {
-    btnRef.current.disabled = true;
-    document.getElementById('submit-button').innerHTML = '<div id="loader"></div>';
-    document.getElementById('submit-button').classList.remove('button1');
-    
-  }
-
-  function hideLoader() {
-    btnRef.current.disabled = false;
-    document.getElementById('submit-button').innerHTML = 'Login';
-    document.getElementById('submit-button').classList.add('button1');
-  }
+  // Already logged in (the game connection only works with a valid session): go to the main menu
+  useEffect(() => {
+    if (socket?.connected) navigate('/page2');
+  }, [socket, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    const username = usernameRef.current.value;
+
+    const username = usernameRef.current.value.trim();
     const password = passwordRef.current.value;
-    showLoader();
-    const a=await login_User({ variables: { input: { username: username, password: password } } });
-    if (a.data.user_login.success==false) {
-      toast.error(a.data.user_login.message, {
-        position: "top-center", 
-        autoClose: 3000,
-        hideProgressBar: true,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        theme: "colored",
-      })
-    }else{
-      toast.success(a.data.user_login.message, {
-        position: "top-center",
-        autoClose: 3000,
-        hideProgressBar: true,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        theme: "colored",
-      });
-      await connectSocket();
-      setTimeout(() => {
-        navigate('/page2');
-      }, 1000);
+    setLoading(true);
+
+    try {
+      const { data } = await login_User({ variables: { input: { username, password } } });
+      const result = data.user_login;
+
+      if (!result.success) {
+        toast.error(result.message, TOAST_OPTIONS);
+        return;
+      }
+
+      toast.success(result.message, TOAST_OPTIONS);
+      // Open the game connection with the new session (replaces any old connection)
+      const connected = await connectSocket({ force: true });
+      if (!connected) {
+        toast.warn("Logged in, but the game connection could not be opened yet. It will retry when you press Play.", TOAST_OPTIONS);
+      }
+      navigate('/page2');
+    } catch {
+      toast.error("Could not reach the server, please try again", TOAST_OPTIONS);
+    } finally {
+      setLoading(false);
     }
-    hideLoader();
   }
 
   function goto_signup() {
@@ -101,9 +85,9 @@ const Login = ({ connectSocket }) => {
           <button className="bg-[#F4B24B] font-bold px-4 rounded-md" onClick={goto_signup}>Sign Up</button>
         </div>
 
-        <form aria-label="Sign up form" className="rounded-3xl w-full max-w-md p-4 relative" onSubmit={handleSubmit}>
+        <form aria-label="Login form" className="rounded-3xl w-full max-w-md p-4 relative" onSubmit={handleSubmit}>
           <div className="wave-group">
-            <input required type="text" name="username" id="username" className="input" ref={usernameRef}/>
+            <input required type="text" name="username" id="username" className="input" ref={usernameRef} autoComplete="username" />
             <span className="bar"></span>
             <label htmlFor="username" className="label text-[#6b4a1e] font-semibold text-xl mb-2 select-none">
               {input_text1.map((value, index) => (
@@ -113,7 +97,7 @@ const Login = ({ connectSocket }) => {
 
           </div>
           <div className="wave-group">
-            <input required type="password" name="password" id="password" className="input" ref={passwordRef}/>
+            <input required type="password" name="password" id="password" className="input" ref={passwordRef} autoComplete="current-password" />
             <span className="bar"></span>
             <label htmlFor="password" className="label text-[#6b4a1e] font-semibold text-xl mb-2 select-none">
               {input_text2.map((value, index) => (
@@ -122,9 +106,9 @@ const Login = ({ connectSocket }) => {
             </label>
           </div>
           <button
-            className="button1 font-fredoka text-2xl text-[#6b4a1e] bg-[#f4b24a] rounded-3xl border-4 border-[#a56f0a] w-full py-3 mb-6 select-none"
-            type="submit" ref={btnRef} id='submit-button'>
-            Login
+            className={`${loading ? '' : 'button1 '}font-fredoka text-2xl text-[#6b4a1e] bg-[#f4b24a] rounded-3xl border-4 border-[#a56f0a] w-full py-3 mb-6 select-none`}
+            type="submit" disabled={loading} id='submit-button'>
+            {loading ? <div id="loader"></div> : 'Login'}
           </button>
         </form>
       </div>

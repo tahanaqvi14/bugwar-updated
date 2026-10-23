@@ -1,27 +1,15 @@
 import { gql } from 'graphql-tag';
 
+// Note: there is deliberately no "password" field here. Anything listed in a GraphQL type can be
+// requested by any client, so exposing it would leak every user's password hash.
 const typeDefs = gql`
     type user{
         displayname:String!
         username:ID!
-        password:String!
         points:Int
         sub_name:String
         total_matches:Int
         email:String
-        sessiontoken:Boolean
-    }
-
-
-    type Match {
-        matchId: String!
-        players: [user!]!
-    }
-
-
-    type question{
-        problem_statement:String!
-        function_name:String!
     }
 
     type Query {
@@ -35,25 +23,12 @@ const typeDefs = gql`
         message: String!
     }
 
-
-    type TestResult {
-        input: [String!]!
-        expected: String!
-        output: String!
-        passed: Boolean!
-    }
-
-    type RunResult {
-        results: [TestResult!]!
-        logs: [String!]!
-        error: String
-    }
-
     input createuser{
         displayname:String!
         username:ID!
         password:String!
         email:String!
+        otp:String!
     }
 
     input loginuser{
@@ -64,27 +39,22 @@ const typeDefs = gql`
     input updateuser{
         newdisplayname:String!
     }
-    
-    input inputformatchsaving{
-        usernames:String!
-    }
 
     type Mutation{
+        # Sign up: emails a code to a new address. The code is never sent back in the response.
+        send_email(email:String!,username:String!):CreateUserResponse!
         user_creation(input:createuser!):CreateUserResponse!
-        send_email(email:String,username:String):CreateUserResponse!
         user_login(input:loginuser!):CreateUserResponse!
 
-        changepwdd(username:String,pwd:String):CreateUserResponse!
-        Update(input:updateuser):user
+        # Password reset for the logged-in user: code goes to the email saved on the account.
+        send_reset_otp:CreateUserResponse!
+        verify_reset_otp(otp:String!):CreateUserResponse!
+        changepwdd(otp:String!,pwd:String!):CreateUserResponse!
+
+        Update(input:updateuser!):user
         logout:CreateUserResponse!
-        
+
         admin_login(input:loginuser!):CreateUserResponse!
-
-
-        finduser_and_savematch(input: [inputformatchsaving!]!): Match!
-
-        remove(input: inputformatchsaving):user
-        runCode(code: String!): RunResult!
     }
 `
 export default typeDefs;
